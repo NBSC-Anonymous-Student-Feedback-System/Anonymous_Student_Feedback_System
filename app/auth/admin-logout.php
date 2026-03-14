@@ -3,16 +3,15 @@ session_start();
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../config/function.php';
 
-// Log activity before destroying session
-if (isset($_SESSION['user_id'])) {
-    $name = ($_SESSION['first_name'] ?? 'User') . ' ' . ($_SESSION['last_name'] ?? '');
-    logActivity($pdo, $_SESSION['user_id'], 'LOGOUT', sanitize($name) . ' logged out');
-} elseif (isset($_SESSION['oauth_user_id'])) {
-    logActivity($pdo, $_SESSION['oauth_user_id'], 'LOGOUT', ($_SESSION['oauth_name'] ?? 'Student') . ' logged out');
+$userId    = $_SESSION['user_id'] ?? null;
+$firstName = ($_SESSION['first_name'] ?? '') . ' ' . ($_SESSION['last_name'] ?? '');
+
+if ($userId) {
+    $check = $pdo->prepare("SELECT user_id FROM users WHERE user_id=?");
+    $check->execute([$userId]);
+    if ($check->fetch()) {
+        logActivity($pdo, 'LOGOUT', trim($firstName) . ' logged out', $userId);
+    }
 }
-
-// Clear all session data
-session_unset();
 session_destroy();
-
-redirect(BASE_URL . '/index.php');
+redirect(BASE_URL . '/app/auth/admin-login.php');

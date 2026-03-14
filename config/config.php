@@ -4,7 +4,7 @@ define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_NAME', 'working_schema');
 
-define('BASE_URL', 'http://localhost/NBSC-s-Anonymous-Student-Feedback-System');
+define('BASE_URL', 'http://localhost/Anonymous_Student_Feedback_System/');
 
 try {
     $pdo = new PDO(

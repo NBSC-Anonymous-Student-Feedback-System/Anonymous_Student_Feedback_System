@@ -10,16 +10,11 @@ requireRole('admin');
 
 $totalUsers    = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
 $totalAdmins   = $pdo->query("SELECT COUNT(*) FROM users WHERE role='admin'")->fetchColumn();
-$totalStaff    = $pdo->query("SELECT COUNT(*) FROM users WHERE role='staff'")->fetchColumn();
+$totalManagers = $pdo->query("SELECT COUNT(*) FROM users WHERE role='manager'")->fetchColumn();
 $totalStudents = $pdo->query("SELECT COUNT(*) FROM users WHERE role='student'")->fetchColumn();
 
 $totalFeedback = $pdo->query("SELECT COUNT(*) FROM feedback")->fetchColumn();
-$pendingCount  = $pdo->query("SELECT COUNT(*) FROM feedback WHERE status='pending'")->fetchColumn();
-$reviewedCount = $pdo->query("SELECT COUNT(*) FROM feedback WHERE status='reviewed'")->fetchColumn();
-$resolvedCount = $pdo->query("SELECT COUNT(*) FROM feedback WHERE status='resolved'")->fetchColumn();
 $urgentCount   = $pdo->query("SELECT COUNT(*) FROM feedback WHERE priority='Urgent'")->fetchColumn();
-$totalWarnings = $pdo->query("SELECT COUNT(*) FROM user_warnings")->fetchColumn();
-$totalComments = $pdo->query("SELECT COUNT(*) FROM comments WHERE status='active'")->fetchColumn();
 
 $recentFeedback = $pdo->query("SELECT * FROM feedback ORDER BY submitted_at DESC LIMIT 5")->fetchAll();
 $recentLogs = $pdo->query("
@@ -51,17 +46,12 @@ renderSidebar('admin', 'Dashboard');
   <div class="stats-grid">
     <div class="stat-card purple"><div class="stat-label">Total Users</div><div class="stat-value"><?= $totalUsers ?></div></div>
     <div class="stat-card blue"><div class="stat-label">Admins</div><div class="stat-value"><?= $totalAdmins ?></div></div>
-    <div class="stat-card green"><div class="stat-label">Staff</div><div class="stat-value"><?= $totalStaff ?></div></div>
+    <div class="stat-card green"><div class="stat-label">Managers</div><div class="stat-value"><?= $totalManagers ?></div></div>
     <div class="stat-card orange"><div class="stat-label">Students</div><div class="stat-value"><?= $totalStudents ?></div></div>
   </div>
   <div class="stats-grid">
     <div class="stat-card blue"><div class="stat-label">Total Feedback</div><div class="stat-value"><?= $totalFeedback ?></div></div>
-    <div class="stat-card orange"><div class="stat-label">Pending</div><div class="stat-value"><?= $pendingCount ?></div></div>
-    <div class="stat-card purple"><div class="stat-label">Reviewed</div><div class="stat-value"><?= $reviewedCount ?></div></div>
-    <div class="stat-card green"><div class="stat-label">Resolved</div><div class="stat-value"><?= $resolvedCount ?></div></div>
     <div class="stat-card red"><div class="stat-label">Urgent</div><div class="stat-value"><?= $urgentCount ?></div></div>
-    <div class="stat-card orange"><div class="stat-label">Warnings</div><div class="stat-value"><?= $totalWarnings ?></div></div>
-    <div class="stat-card blue"><div class="stat-label">Comments</div><div class="stat-value"><?= $totalComments ?></div></div>
   </div>
 
   <div class="row">
@@ -73,14 +63,13 @@ renderSidebar('admin', 'Dashboard');
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Category</th><th>Message</th><th>Priority</th><th>Status</th><th>Submitted</th></tr></thead>
+            <thead><tr><th>Category</th><th>Message</th><th>Priority</th><th>Submitted</th></tr></thead>
             <tbody>
               <?php foreach ($recentFeedback as $fb): ?>
               <tr>
                 <td><?= sanitize(categoryLabel($fb['category'])) ?></td>
-                <td><span class="msg-truncate"><?= sanitize($fb['message']) ?></span></td>
+                <td><span class="msg-truncate"><?= "🔒 Encrypted" ?></span></td>
                 <td><?= priorityBadge($fb['priority']) ?></td>
-                <td><?= statusBadge($fb['status']) ?></td>
                 <td class="text-muted"><?= timeAgo($fb['submitted_at']) ?></td>
               </tr>
               <?php endforeach; ?>

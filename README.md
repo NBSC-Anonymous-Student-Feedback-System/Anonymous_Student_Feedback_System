@@ -116,7 +116,7 @@ NBSC-s-Anonymous-Student-Feedback-System/
    define('DB_USER', 'root');
    define('DB_PASS', '');
    define('DB_NAME', 'working_schema');
-   define('BASE_URL', 'http://localhost/NBSC-s-Anonymous-Student-Feedback-System');
+   define('BASE_URL', 'http://localhost/Anonymous_Student_Feedback_System');
    ```
 
 4. Make sure the `ENCRYPT_KEY` in `config/function.php` matches the key used in the SQL seed:
@@ -126,7 +126,7 @@ NBSC-s-Anonymous-Student-Feedback-System/
 
 5. Start Apache and MySQL (via XAMPP or similar), then visit:
    ```
-   http://localhost/NBSC-s-Anonymous-Student-Feedback-System
+   http://localhost/Anonymous_Student_Feedback_System
    ```
 
 ---

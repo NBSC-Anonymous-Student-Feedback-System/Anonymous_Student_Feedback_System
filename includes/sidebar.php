@@ -2,27 +2,25 @@
 function renderSidebar($role, $active = '') {
     $base = BASE_URL;
     $user = currentUser();
-    $initial = strtoupper(substr($user['first_name'] ?? 'U', 0, 1));
+    $initial  = strtoupper(substr($user['first_name'] ?? 'U', 0, 1));
     $fullname = ($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '');
 
     $nav = '';
 
     if ($role === 'admin') {
-        $nav .= navItem("$base/app/admin/dashboard.php", svgIcon('grid'), 'Dashboard', $active);
+        $nav .= navItem("$base/app/admin/dashboard.php",    svgIcon('grid'),           'Dashboard',     $active);
         $nav .= '<span class="nav-section-label">Management</span>';
-        $nav .= navItem("$base/app/admin/feedback.php", svgIcon('message-square'), 'Feedback', $active);
-        $nav .= navItem("$base/app/admin/comments.php", svgIcon('chat'), 'Comments', $active);
-        $nav .= navItem("$base/app/admin/users.php", svgIcon('users'), 'Users', $active);
-        $nav .= navItem("$base/app/admin/warnings.php", svgIcon('warning'), 'Warnings', $active);
+        $nav .= navItem("$base/app/admin/feedback.php",     svgIcon('message-square'), 'Feedback',      $active);
+        $nav .= navItem("$base/app/admin/users.php",        svgIcon('users'),          'Users',         $active);
+        $nav .= navItem("$base/app/admin/review-requests.php",svgIcon('shield'),         'Review Requests',$active);
         $nav .= '<span class="nav-section-label">Reports</span>';
-        $nav .= navItem("$base/app/admin/activity-logs.php", svgIcon('file-text'), 'Activity Logs', $active);
-        $nav .= navItem("$base/app/admin/notifications.php", svgIcon('bell'), 'Notifications', $active);
-    } elseif ($role === 'staff') {
-        $nav .= navItem("$base/app/manager/dashboard.php", svgIcon('grid'), 'Dashboard', $active);
+        $nav .= navItem("$base/app/admin/activity-logs.php",svgIcon('file-text'),      'Activity Logs', $active);
+        $nav .= navItem("$base/app/admin/notifications.php",svgIcon('bell'),           'Notifications', $active);
+    } elseif ($role === 'manager') {
+        $nav .= navItem("$base/app/manager/dashboard.php",    svgIcon('grid'),           'Dashboard',    $active);
         $nav .= '<span class="nav-section-label">Feedback</span>';
-        $nav .= navItem("$base/app/manager/feedback.php", svgIcon('message-square'), 'All Feedback', $active);
-        $nav .= navItem("$base/app/manager/comments.php", svgIcon('chat'), 'Comments', $active);
-        $nav .= navItem("$base/app/manager/notifications.php", svgIcon('bell'), 'Notifications', $active);
+        $nav .= navItem("$base/app/manager/feedback.php",     svgIcon('message-square'), 'All Feedback', $active);
+        $nav .= navItem("$base/app/manager/notifications.php",svgIcon('bell'),           'Notifications',$active);
     }
 
     echo '
@@ -41,7 +39,7 @@ function renderSidebar($role, $active = '') {
               <div class="role">' . ucfirst($role) . '</div>
             </div>
           </div>
-          <a href="' . $base . '/app/auth/logout.php" class="btn btn-outline" style="width:100%;justify-content:center;">
+          <a href="' . $base . '/app/auth/admin-logout.php" class="btn btn-outline" style="width:100%;justify-content:center;">
             ' . svgIcon('log-out') . ' Logout
           </a>
         </div>
@@ -69,9 +67,8 @@ function svgIcon($name) {
         'bell'           => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>',
         'log-out'        => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>',
         'plus'           => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>',
-        'trash'          => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>',
-        'check-circle'   => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
         'flag'           => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 2H21l-3 6 3 6h-8.5l-1-2H5a2 2 0 00-2 2zm9-13.5V9"/></svg>',
+        'shield'         => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>',
     ];
     return $icons[$name] ?? '';
 }

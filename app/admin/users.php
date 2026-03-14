@@ -12,15 +12,15 @@ $msg = ''; $err = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
     $school_id=$_POST['school_id']; $first=$_POST['first_name']; $last=$_POST['last_name'];
     $email=$_POST['email']; $pass=$_POST['password']; $role=$_POST['role'];
-    $dept=$_POST['department']; $status=$_POST['status'];
+    $dept=$_POST['department'];
     if ($school_id&&$first&&$last&&$email&&$pass&&$role&&$dept) {
         $chk=$pdo->prepare("SELECT user_id FROM users WHERE email=?"); $chk->execute([$email]);
         if ($chk->fetch()) { $err='Email already exists.'; }
         else {
             $hash=password_hash($pass,PASSWORD_BCRYPT);
-            $pdo->prepare("INSERT INTO users (school_id,first_name,last_name,email,password,role,department,status) VALUES (?,?,?,?,?,?,?,?)")
-                ->execute([$school_id,$first,$last,$email,$hash,$role,$dept,$status]);
-            logActivity($pdo,$_SESSION['user_id'],'USER_CREATED',"Created account for $first $last");
+            $pdo->prepare("INSERT INTO users (school_id,first_name,last_name,email,password,role,department) VALUES (?,?,?,?,?,?,?)")
+                ->execute([$school_id,$first,$last,$email,$hash,$role,$dept]);
+            logActivity($pdo, 'USER_CREATED', "Created account for $first $last", $_SESSION['user_id']);
             $msg='User created.';
         }
     } else { $err='Fill all required fields.'; }
@@ -30,12 +30,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_user'])) {
     if ($uid!==$_SESSION['user_id']) { $pdo->prepare("DELETE FROM users WHERE user_id=?")->execute([$uid]); $msg='User deleted.'; }
     else { $err='Cannot delete your own account.'; }
 }
-if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['toggle_status'])) {
-    $uid=(int)$_POST['user_id'];
-    $new=$_POST['current_status']==='active'?'inactive':'active';
-    $pdo->prepare("UPDATE users SET status=? WHERE user_id=?")->execute([$new,$uid]);
-    $msg='Status updated.';
-}
+
 
 $users=$pdo->query("SELECT * FROM users ORDER BY role,last_name")->fetchAll();
 
@@ -51,13 +46,13 @@ renderSidebar('admin','Users');
   </div>
 </div>
 <div class="content">
-  <div class="page-header"><h1>Users</h1><p>Manage students, staff, and admins.</p></div>
+  <div class="page-header"><h1>Users</h1><p>Manage students, managers, and admins.</p></div>
   <?php if ($msg): ?><div class="alert alert-success"><?= sanitize($msg) ?></div><?php endif; ?>
   <?php if ($err): ?><div class="alert alert-danger"><?= sanitize($err) ?></div><?php endif; ?>
   <div class="card">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>School ID</th><th>Name</th><th>Email</th><th>Role</th><th>Department</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+        <thead><tr><th>School ID</th><th>Name</th><th>Email</th><th>Role</th><th>Department</th><th>Joined</th><th>Actions</th></tr></thead>
         <tbody>
           <?php foreach ($users as $u): ?>
           <tr>
@@ -66,15 +61,9 @@ renderSidebar('admin','Users');
             <td class="text-muted"><?= sanitize($u['email']) ?></td>
             <td><?= roleBadge($u['role']) ?></td>
             <td><?= sanitize($u['department']) ?></td>
-            <td><span class="badge <?= $u['status']==='active'?'badge-active':'badge-inactive' ?>"><?= ucfirst($u['status']) ?></span></td>
             <td class="text-muted"><?= date('M d, Y',strtotime($u['created_at'])) ?></td>
             <td>
               <div class="flex gap-2">
-                <form method="POST" style="display:inline;">
-                  <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
-                  <input type="hidden" name="current_status" value="<?= $u['status'] ?>">
-                  <button type="submit" name="toggle_status" class="btn btn-outline btn-sm"><?= $u['status']==='active'?'Deactivate':'Activate' ?></button>
-                </form>
                 <?php if ($u['user_id']!==$_SESSION['user_id']): ?>
                 <form method="POST" style="display:inline;" onsubmit="return confirm('Delete user?')">
                   <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
@@ -101,13 +90,12 @@ renderSidebar('admin','Users');
       <form method="POST">
         <div class="row">
           <div class="col-6"><div class="form-group"><label class="form-label">School ID *</label><input type="text" name="school_id" class="form-control" required></div></div>
-          <div class="col-6"><div class="form-group"><label class="form-label">Role *</label><select name="role" class="form-control" required><option value="student">Student</option><option value="staff">Staff</option><option value="admin">Admin</option></select></div></div>
+          <div class="col-6"><div class="form-group"><label class="form-label">Role *</label><select name="role" class="form-control" required><option value="student">Student</option><option value="manager">Manager</option><option value="admin">Admin</option></select></div></div>
           <div class="col-6"><div class="form-group"><label class="form-label">First Name *</label><input type="text" name="first_name" class="form-control" required></div></div>
           <div class="col-6"><div class="form-group"><label class="form-label">Last Name *</label><input type="text" name="last_name" class="form-control" required></div></div>
           <div class="col-12"><div class="form-group"><label class="form-label">Email *</label><input type="email" name="email" class="form-control" placeholder="user@nbsc.edu.ph" required></div></div>
           <div class="col-6"><div class="form-group"><label class="form-label">Password *</label><input type="password" name="password" class="form-control" required></div></div>
           <div class="col-6"><div class="form-group"><label class="form-label">Department *</label><input type="text" name="department" class="form-control" required></div></div>
-          <div class="col-6"><div class="form-group"><label class="form-label">Status</label><select name="status" class="form-control"><option value="active">Active</option><option value="inactive">Inactive</option></select></div></div>
         </div>
         <div class="flex gap-2" style="justify-content:flex-end;margin-top:4px;">
           <button type="button" onclick="document.getElementById('createModal').style.display='none'" class="btn btn-outline">Cancel</button>

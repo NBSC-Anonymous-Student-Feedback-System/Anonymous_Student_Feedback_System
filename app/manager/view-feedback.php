@@ -27,31 +27,14 @@ if (!$data) {
 $offHours = !isWithinOfficeHours();
 
 $msg = ''; $err = '';
-$plaintext   = null;
-$integrityOk = null;
+$plaintext = null;
 
 // Only decrypt if within office hours
 if (!$offHours) {
-    $rawEnc    = $data['message_enc'];
-    $plaintext = decryptMessage(base64_encode($rawEnc));
-
-    // Fallback: try raw if base64 fails
-    if (!$plaintext) {
-        $plaintext = @openssl_decrypt($rawEnc, 'AES-256-CBC', ENCRYPT_KEY, 0);
-    }
-
-    // Use AES_DECRYPT style if stored via MySQL AES_ENCRYPT
-    // For MySQL AES_ENCRYPT stored as BLOB, decrypt directly
-    if (!$plaintext && is_resource(fopen('php://memory','r'))) {
-        $stmt2 = $pdo->prepare("SELECT AES_DECRYPT(message_enc, ?) AS plain FROM feedback WHERE feedback_id=?");
-        $stmt2->execute([ENCRYPT_KEY, $fid]);
-        $row2 = $stmt2->fetch();
-        $plaintext = $row2['plain'] ?? null;
-    }
+    $plaintext = decryptMessage($data['message_enc']);
 
     if ($plaintext) {
         $integrityOk = verifyIntegrity($plaintext, $data['message_hash']);
-        // Log this access
         logActivity($pdo, 'FEEDBACK_ACCESSED', "Manager accessed and read Feedback #$fid (Request #$rid)", $_SESSION['user_id']);
     }
 }
@@ -99,9 +82,6 @@ renderSidebar('manager', 'All Feedback');
       <?php elseif ($plaintext): ?>
         <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;font-size:14px;line-height:1.7;">
           <?= sanitize($plaintext) ?>
-        </div>
-        <div style="margin-top:8px;font-size:12px;<?= $integrityOk ? 'color:#16a34a;' : 'color:#dc2626;' ?>">
-          <?= $integrityOk ? '✅ Integrity verified — content has not been tampered.' : '⚠️ Integrity check failed — content may have been modified.' ?>
         </div>
       <?php else: ?>
         <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;font-size:13.5px;color:#991b1b;">

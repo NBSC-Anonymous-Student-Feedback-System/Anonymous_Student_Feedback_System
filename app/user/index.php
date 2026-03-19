@@ -6,7 +6,7 @@ require_once __DIR__ . '/../../config/function.php';
 requireRole('student');
 
 $err = '';
-$submitted = false;
+$submitted = isset($_GET['submitted']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
     $category = $_POST['category'] ?? '';
@@ -27,6 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
                 ->execute([$nu['user_id'], "New $priority Feedback", "A new $priority priority $category feedback was submitted."]);
         }
         $submitted = true;
+        header("Location: " . BASE_URL . "/app/user/index.php?submitted=1");
+        exit;
     } else {
         $err = 'Please fill all fields. Message must be 10–200 characters.';
     }
@@ -293,14 +295,20 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
             <p>All messages are encrypted and can only be accessed through an authorized review request.</p>
           </div>
           <div class="submit-card-body">
+
             <?php if ($submitted): ?>
-              <div class="success-box">
+              <div class="success-box" id="success-box">
                 <div class="success-icon">✅</div>
                 <h3>Feedback Sent!</h3>
                 <p>Your anonymous feedback has been submitted successfully.<br>You can track it under <strong>My Submissions</strong>.</p>
-                <button onclick="showSection('submissions')" class="submit-btn" style="max-width:220px;margin:20px auto 0;display:block;">View My Submissions</button>
+                <button onclick="sendAnother()" class="submit-btn" style="max-width:220px;margin:20px auto 0;display:block;">Send Another</button>
+                <button onclick="showSection('submissions')" class="submit-btn" style="max-width:220px;margin:10px auto 0;display:block;background:linear-gradient(135deg,#059669,#10b981);">View My Submissions</button>
               </div>
+              <div id="feedback-form-wrap" style="display:none;">
             <?php else: ?>
+              <div id="feedback-form-wrap">
+            <?php endif; ?>
+
               <form method="POST" id="feedbackForm">
                 <div class="section-label">Category</div>
                 <div class="category-grid">
@@ -329,7 +337,8 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
                 <div class="char-count"><span id="char-count">0</span>/200</div>
                 <button type="submit" name="submit_feedback" class="submit-btn">Send Anonymously 🔒</button>
               </form>
-            <?php endif; ?>
+
+            </div>
           </div>
         </div>
       </div>
@@ -387,6 +396,17 @@ function showSection(name) {
     document.getElementById('nav-' + s).classList.toggle('active', s === name);
   });
   document.getElementById('topbar-title').textContent = titles[name];
+}
+
+function sendAnother() {
+  document.getElementById('success-box').style.display = 'none';
+  document.getElementById('feedback-form-wrap').style.display = 'block';
+  document.getElementById('cat-general').classList.add('selected');
+  document.getElementById('pri-Low').classList.add('sel-Low');
+  document.getElementById('category-input').value = 'general';
+  document.getElementById('priority-input').value = 'Low';
+  document.getElementById('msg-input').value = '';
+  document.getElementById('char-count').textContent = '0';
 }
 
 <?php if ($err): ?>showSection('submit');<?php endif; ?>

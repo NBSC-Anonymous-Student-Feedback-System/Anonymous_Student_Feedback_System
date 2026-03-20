@@ -138,7 +138,7 @@ All accounts use the password: **`password`**
 | Role | Name | Email |
 |---|---|---|
 | Admin | Admin NBSC | 20231671@nbsc.edu.ph |
-| Manager | Erick Rubin | 20232178@nbsc.edu.ph |
+| Manager | Erick Rubin | r.villanueva@nbsc.edu.ph|
 | Student | Rhics Geonzon | 20231317@nbsc.edu.ph |
 | Student | Troy Rojo | t.rojo@nbsc.edu.ph |
 | Student | Francis Idul | 20231685@nbsc.edu.ph |

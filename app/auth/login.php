@@ -21,7 +21,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isNbscEmail($email)) {
         $error = 'Only @nbsc.edu.ph email addresses are allowed.';
     } else {
-        // No role filter — let the DB return whoever matches the email
         $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? AND status = 'active'");
         $stmt->execute([$email]);
         $user = $stmt->fetch();
@@ -55,111 +54,161 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login — NBSC Feedback System</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css">
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    *, *::before, *::after { box-sizing: border-box; }
+
     body {
       background: #f0f2f5;
       display: flex;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
+      margin: 0;
+      font-family: 'Inter', sans-serif;
     }
 
-    .login-card {
+    .login-wrap {
       width: 100%;
       max-width: 420px;
+      padding: 16px;
+    }
+
+    /* Brand */
+    .brand-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+   .brand-logo {
+  width: 80px; height: 80px;
+  border-radius: 22px;
+  overflow: hidden;
+  margin: 0 auto 14px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(30,64,175,0.25);
+}
+.brand-logo img {
+  width: 80px; height: 80px;
+  object-fit: cover;
+  border-radius: 22px;
+  mix-blend-mode: multiply;
+}
+    .brand-title {
+      font-size: 20px; font-weight: 700;
+      color: #111827; margin: 0 0 4px;
+    }
+    .brand-sub {
+      font-size: 13px; color: #6b7280; margin: 0;
+    }
+
+    /* Card */
+    .login-card {
       background: #fff;
       border-radius: 18px;
-      padding: 40px 40px 32px;
+      padding: 36px 40px 32px;
       box-shadow: 0 4px 24px rgba(0,0,0,0.09);
     }
-
-    .brand-icon {
-      width: 56px;
-      height: 56px;
-      background: linear-gradient(135deg, #1a56db, #7e3af2);
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 14px;
-      font-size: 26px;
+    .login-card-title {
+      font-size: 16px; font-weight: 700;
+      color: #111827; margin: 0 0 4px;
+    }
+    .login-card-sub {
+      font-size: 12.5px; color: #6b7280;
+      margin: 0 0 22px;
     }
 
+    /* Form */
     .form-label {
-      font-size: 13px;
-      font-weight: 500;
-      margin-bottom: 6px;
+      font-size: 13px; font-weight: 500;
+      color: #374151; margin-bottom: 6px;
     }
-
+    .form-label span {
+      color: #9ca3af; font-size: 11px; font-weight: 400;
+    }
     .form-control {
       border-radius: 9px;
       font-size: 13.5px;
       padding: 10px 14px;
       border: 1.5px solid #e5e7eb;
+      font-family: 'Inter', sans-serif;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: #1e40af;
+      box-shadow: 0 0 0 3px rgba(30,64,175,0.10);
     }
 
-    .form-control:focus {
-      border-color: #1a56db;
-      box-shadow: 0 0 0 3px rgba(26,86,219,0.10);
+    .pw-wrap { position: relative; }
+    .eye-btn {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      font-size: 16px; color: #9ca3af; padding: 0; line-height: 1;
     }
+    .eye-btn:hover { color: #6b7280; }
 
     .btn-login {
-      width: 100%;
-      padding: 12px;
-      background: linear-gradient(135deg, #1a56db, #7e3af2);
-      color: #fff;
-      border: none;
+      width: 100%; padding: 12px;
+      background: linear-gradient(135deg, #1e40af, #0ea5e9);
+      color: #fff; border: none;
       border-radius: 11px;
-      font-size: 14px;
-      font-weight: 700;
+      font-size: 14px; font-weight: 700;
       cursor: pointer;
-      font-family: inherit;
+      font-family: 'Inter', sans-serif;
       transition: opacity 0.2s;
+      margin-top: 4px;
     }
-
     .btn-login:hover { opacity: 0.90; }
 
-    .eye-btn {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 16px;
+    .login-footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 12px;
       color: #9ca3af;
-      padding: 0;
-      line-height: 1;
+    }
+
+    .alert-error {
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      color: #991b1b;
+      border-radius: 9px;
+      padding: 10px 14px;
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 480px) {
+      .login-card { padding: 28px 24px; }
     }
   </style>
 </head>
 <body>
-  <div style="width:100%;max-width:420px;padding:16px;">
+  <div class="login-wrap">
 
-    <!-- Brand -->
-    <div style="text-align:center;margin-bottom:28px;">
-      <div class="brand-icon">💬</div>
-      <h4 style="font-weight:700;margin-bottom:4px;font-size:20px;">NBSC Feedback System</h4>
-      <p style="color:#6b7280;font-size:13px;margin:0;">Anonymous · Safe · Heard</p>
+    <!-- Brand Header -->
+    <div class="brand-header">
+      <div class="brand-logo">
+        <img src="<?= BASE_URL ?>/media/logoweb.svg" alt="NBSC Logo">
+      </div>
+      <h4 class="brand-title">NBSC Feedback System</h4>
+      <p class="brand-sub">Anonymous · Safe · Heard</p>
     </div>
 
+    <!-- Login Card -->
     <div class="login-card">
-      <h5 style="font-weight:700;font-size:16px;margin-bottom:4px;">Welcome back</h5>
-      <p style="color:#6b7280;font-size:12.5px;margin-bottom:22px;">Sign in with your NBSC account to continue</p>
+      <p class="login-card-title">Welcome back</p>
+      <p class="login-card-sub">Sign in with your NBSC account to continue</p>
 
       <?php if ($error): ?>
-        <div class="alert alert-danger" style="font-size:13px;border-radius:9px;">
-          <?= sanitize($error) ?>
-        </div>
+        <div class="alert-error">⚠️ <?= sanitize($error) ?></div>
       <?php endif; ?>
 
       <form method="POST">
         <div class="mb-3">
           <label class="form-label">
-            School Email
-            <span style="color:#9ca3af;font-size:11px;">(@nbsc.edu.ph only)</span>
+            School Email <span>(@nbsc.edu.ph only)</span>
           </label>
           <input
             type="email"
@@ -174,7 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="mb-4">
           <label class="form-label">Password</label>
-          <div style="position:relative;">
+          <div class="pw-wrap">
             <input
               type="password"
               name="password"
@@ -191,9 +240,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button type="submit" class="btn-login">Sign In</button>
       </form>
 
-      <p style="text-align:center;margin-top:20px;font-size:12px;color:#9ca3af;">
+      <div class="login-footer">
         🔒 Your identity is protected — feedback is fully anonymous
-      </p>
+      </div>
     </div>
 
   </div>

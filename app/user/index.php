@@ -21,16 +21,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
         $pdo->prepare("INSERT INTO feedback (category, priority, message_enc, message_hash, submitted_by) VALUES (?,?,?,?,?)")
             ->execute([$category, $priority, $encMessage, $hashMessage, $_SESSION['user_id']]);
 
-        $notifyUsers = $pdo->query("SELECT user_id FROM users WHERE role IN ('admin','manager')")->fetchAll();
+        $notifyUsers = $pdo->query("SELECT user_id FROM users WHERE role IN ('admin','staff')")->fetchAll();
         foreach ($notifyUsers as $nu) {
             $pdo->prepare("INSERT INTO notifications (user_id, title, message) VALUES (?,?,?)")
                 ->execute([$nu['user_id'], "New $priority Feedback", "A new $priority priority $category feedback was submitted."]);
         }
-        $submitted = true;
+
+        // Redirect immediately, no $submitted = true before this
         header("Location: " . BASE_URL . "/app/user/index.php?submitted=1");
         exit;
     } else {
         $err = 'Please fill all fields. Message must be 10–200 characters.';
+    }
+}
+
+// ─── UPDATE FEEDBACK ──────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_feedback'])) {
+    $feedback_id = (int)($_POST['feedback_id'] ?? 0);
+    $message     = trim($_POST['updated_message'] ?? '');
+
+    // Verify ownership
+    $check = $pdo->prepare("SELECT * FROM feedback WHERE feedback_id = ? AND submitted_by = ?");
+    $check->execute([$feedback_id, $_SESSION['user_id']]);
+    $existing = $check->fetch();
+
+    if ($existing && strlen($message) >= 10 && strlen($message) <= 200) {
+        $encMessage  = encryptMessage($message);
+        $hashMessage = hashMessage($message);
+        $pdo->prepare("UPDATE feedback SET message_enc = ?, message_hash = ? WHERE feedback_id = ? AND submitted_by = ?")
+            ->execute([$encMessage, $hashMessage, $feedback_id, $_SESSION['user_id']]);
+        header("Location: " . BASE_URL . "/app/user/index.php?updated=1");
+        exit;
+    } else {
+        $err = 'Update failed. Message must be 10–200 characters.';
+    }
+}
+
+// ─── DELETE FEEDBACK ──────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_feedback'])) {
+    $feedback_id = (int)($_POST['feedback_id'] ?? 0);
+
+    // Verify ownership before deleting
+    $check = $pdo->prepare("SELECT feedback_id FROM feedback WHERE feedback_id = ? AND submitted_by = ?");
+    $check->execute([$feedback_id, $_SESSION['user_id']]);
+
+    if ($check->fetch()) {
+        $pdo->prepare("DELETE FROM feedback_reviews WHERE feedback_id = ?")->execute([$feedback_id]);
+        $pdo->prepare("DELETE FROM feedback WHERE feedback_id = ? AND submitted_by = ?")->execute([$feedback_id, $_SESSION['user_id']]);
+        header("Location: " . BASE_URL . "/app/user/index.php?deleted=1");
+        exit;
+    } else {
+        $err = 'Delete failed. You do not own this feedback.';
     }
 }
 
@@ -176,6 +217,35 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
     .empty-state{text-align:center;padding:48px 20px;background:#fff;border-radius:14px;border:1px solid #e5e7eb;}
     .empty-icon{font-size:44px;margin-bottom:12px;}
     .empty-state p{font-size:14px;color:#6b7280;}
+
+    /* Edit/Delete action buttons */
+.fb-action-btn {
+  padding: 5px 14px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+.fb-action-btn:hover { opacity: 0.82; }
+.btn-edit   { background: #eff6ff; color: #1d4ed8; }
+.btn-save   { background: #f0fdf4; color: #16a34a; }
+.btn-cancel { background: #f3f4f6; color: #6b7280; }
+.btn-delete { background: #fef2f2; color: #dc2626; }
+
+/* Success/delete alert */
+.alert-success-box {
+  background: #f0fdf4;
+  border: 1px solid #16a34a;
+  color: #166534;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
   </style>
 </head>
 <body>
@@ -344,43 +414,108 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
       </div>
 
       <!-- SECTION: My Submissions -->
-      <div class="page-section" id="section-submissions">
-        <div class="page-header">
-          <h1>My Submissions</h1>
-          <p>Your personal feedback history. Only you can see this.</p>
+     <!-- SECTION: My Submissions -->
+<div class="page-section" id="section-submissions">
+  <div class="page-header">
+    <h1>My Submissions</h1>
+    <p>Your personal feedback history. Only you can see this.</p>
+  </div>
+
+  <?php if (isset($_GET['updated'])): ?>
+    <div class="alert-success-box">✅ Feedback updated successfully.</div>
+  <?php elseif (isset($_GET['deleted'])): ?>
+    <div class="alert-success-box" style="background:#fef2f2;border-color:#dc2626;color:#991b1b;">🗑️ Feedback deleted successfully.</div>
+  <?php endif; ?>
+
+  <div class="section-header">
+    <h2>Recent Submissions</h2>
+    <span class="section-count"><?= count($mySubmissions) ?></span>
+  </div>
+
+  <?php if (empty($mySubmissions)): ?>
+    <div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <p>You haven't submitted any feedback yet.<br>Go to <strong>Submit Feedback</strong> to get started!</p>
+    </div>
+  <?php else: foreach ($mySubmissions as $fb):
+    $plain = decryptMessage($fb['message_enc']); ?>
+    <div class="fb-card" id="fb-card-<?= $fb['feedback_id'] ?>">
+      <div class="fb-card-body">
+        <div class="fb-meta">
+          <span class="fb-cat"><?= categoryIcon($fb['category']) ?> <?= sanitize(categoryLabel($fb['category'])) ?></span>
+          <?= priorityBadge($fb['priority']) ?>
         </div>
-        <div class="section-header">
-          <h2>Recent Submissions</h2>
-          <span class="section-count"><?= count($mySubmissions) ?></span>
+
+        <!-- Read mode -->
+        <div class="fb-message" id="view-<?= $fb['feedback_id'] ?>">
+          <?= sanitize($plain ?: '[Could not decrypt]') ?>
         </div>
-        <?php if (empty($mySubmissions)): ?>
-          <div class="empty-state">
-            <div class="empty-icon">📭</div>
-            <p>You haven't submitted any feedback yet.<br>Go to <strong>Submit Feedback</strong> to get started!</p>
+
+        <!-- Edit mode (hidden by default) -->
+        <form method="POST" id="edit-form-<?= $fb['feedback_id'] ?>" style="display:none;">
+          <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
+          <textarea
+            name="updated_message"
+            id="edit-msg-<?= $fb['feedback_id'] ?>"
+            class="msg-area"
+            maxlength="200"
+            minlength="10"
+            required
+            oninput="updateEditCount(<?= $fb['feedback_id'] ?>)"
+            style="margin-bottom:4px;"
+          ><?= sanitize($plain) ?></textarea>
+          <div class="char-count"><span id="edit-count-<?= $fb['feedback_id'] ?>"><?= strlen($plain) ?></span>/200</div>
+        </form>
+
+        <div class="fb-footer">
+          <span><?= timeAgo($fb['submitted_at']) ?></span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <!-- Edit button -->
+            <button
+              class="fb-action-btn btn-edit"
+              id="edit-btn-<?= $fb['feedback_id'] ?>"
+              onclick="startEdit(<?= $fb['feedback_id'] ?>)"
+            >Edit</button>
+
+            <!-- Save button (hidden by default) -->
+            <button
+              class="fb-action-btn btn-save"
+              id="save-btn-<?= $fb['feedback_id'] ?>"
+              style="display:none;"
+              onclick="confirmUpdate(<?= $fb['feedback_id'] ?>)"
+            >Update</button>
+
+            <!-- Cancel button (hidden by default) -->
+            <button
+              class="fb-action-btn btn-cancel"
+              id="cancel-btn-<?= $fb['feedback_id'] ?>"
+              style="display:none;"
+              onclick="cancelEdit(<?= $fb['feedback_id'] ?>)"
+            >Cancel</button>
+
+            <!-- Delete button -->
+            <form method="POST" id="delete-form-<?= $fb['feedback_id'] ?>" style="display:inline;">
+              <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
+              <button
+                type="button"
+                class="fb-action-btn btn-delete"
+                id="delete-btn-<?= $fb['feedback_id'] ?>"
+                onclick="confirmDelete(<?= $fb['feedback_id'] ?>)"
+              >Delete</button>
+            </form>
           </div>
-        <?php else: foreach ($mySubmissions as $fb):
-          $plain = decryptMessage($fb['message_enc']); ?>
-          <div class="fb-card">
-            <div class="fb-card-body">
-              <div class="fb-meta">
-                <span class="fb-cat"><?= categoryIcon($fb['category']) ?> <?= sanitize(categoryLabel($fb['category'])) ?></span>
-                <?= priorityBadge($fb['priority']) ?>
-              </div>
-              <div class="fb-message"><?= sanitize($plain ?: '[Could not decrypt]') ?></div>
-              <div class="fb-footer">
-                <span><?= timeAgo($fb['submitted_at']) ?></span>
-                <span>Feedback #<?= $fb['feedback_id'] ?></span>
-              </div>
-            </div>
-            <?php if ($fb['review_notes']): ?>
-              <div class="review-note">
-                <strong>✅ Admin Response</strong>
-                <?= sanitize($fb['review_notes']) ?>
-              </div>
-            <?php endif; ?>
-          </div>
-        <?php endforeach; endif; ?>
+        </div>
       </div>
+
+      <?php if ($fb['review_notes']): ?>
+        <div class="review-note">
+          <strong>✅ Admin Response</strong>
+          <?= sanitize($fb['review_notes']) ?>
+        </div>
+      <?php endif; ?>
+    </div>
+  <?php endforeach; endif; ?>
+</div>
 
     </div>
   </div>
@@ -429,6 +564,84 @@ function selectPri(pri) {
 function updateCount() {
   document.getElementById('char-count').textContent = document.getElementById('msg-input').value.length;
 }
+
+let activeEditId  = null;
+let activeDeleteId = null;
+
+function startEdit(id) {
+  // Block if another edit is already open
+  if (activeEditId !== null && activeEditId !== id) {
+    alert('Please finish or cancel your current edit before editing another feedback.');
+    return;
+  }
+  // Block if a delete is pending
+  if (activeDeleteId !== null) {
+    alert('Please cancel your pending delete before editing.');
+    return;
+  }
+  activeEditId = id;
+  document.getElementById('view-' + id).style.display      = 'none';
+  document.getElementById('edit-form-' + id).style.display = 'block';
+  document.getElementById('edit-btn-' + id).style.display  = 'none';
+  document.getElementById('save-btn-' + id).style.display  = 'inline-block';
+  document.getElementById('cancel-btn-' + id).style.display = 'inline-block';
+  document.getElementById('delete-btn-' + id).style.display = 'none';
+}
+
+function cancelEdit(id) {
+  activeEditId = null;
+  document.getElementById('view-' + id).style.display       = 'block';
+  document.getElementById('edit-form-' + id).style.display  = 'none';
+  document.getElementById('edit-btn-' + id).style.display   = 'inline-block';
+  document.getElementById('save-btn-' + id).style.display   = 'none';
+  document.getElementById('cancel-btn-' + id).style.display = 'none';
+  document.getElementById('delete-btn-' + id).style.display = 'inline-block';
+}
+
+function confirmUpdate(id) {
+  const msg = document.getElementById('edit-msg-' + id).value.trim();
+  if (msg.length < 10 || msg.length > 200) {
+    alert('Message must be between 10 and 200 characters.');
+    return;
+  }
+  if (confirm('Are you sure you want to update this feedback?')) {
+    const form = document.getElementById('edit-form-' + id);
+    // Add hidden submit trigger
+    const input = document.createElement('input');
+    input.type  = 'hidden';
+    input.name  = 'update_feedback';
+    input.value = '1';
+    form.appendChild(input);
+    form.submit();
+  }
+}
+
+function confirmDelete(id) {
+  // Block if an edit is active
+  if (activeEditId !== null) {
+    alert('Please finish or cancel your current edit before deleting.');
+    return;
+  }
+  if (confirm('Are you sure you want to delete this feedback? This cannot be undone.')) {
+    const form = document.getElementById('delete-form-' + id);
+    const input = document.createElement('input');
+    input.type  = 'hidden';
+    input.name  = 'delete_feedback';
+    input.value = '1';
+    form.appendChild(input);
+    form.submit();
+  }
+}
+
+function updateEditCount(id) {
+  const len = document.getElementById('edit-msg-' + id).value.length;
+  document.getElementById('edit-count-' + id).textContent = len;
+}
+
+// Auto-show submissions section on update/delete redirect
+<?php if (isset($_GET['updated']) || isset($_GET['deleted'])): ?>
+showSection('submissions');
+<?php endif; ?>
 </script>
 </body>
 </html>

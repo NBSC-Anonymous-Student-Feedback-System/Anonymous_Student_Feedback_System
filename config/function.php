@@ -101,12 +101,20 @@ function encryptUserId($userId) {
 
 // ─── Time ago ─────────────────────────────────────────────────────
 function timeAgo($datetime) {
-    $diff = time() - strtotime($datetime);
-    if ($diff < 60)      return 'Just now';
-    if ($diff < 3600)    { $m = floor($diff/60);    return $m.' minute'.($m!=1?'s':'').' ago'; }
-    if ($diff < 86400)   { $h = floor($diff/3600);  return $h.' hour'.($h!=1?'s':'').' ago'; }
-    if ($diff < 604800)  { $d = floor($diff/86400); return $d.' day'.($d!=1?'s':'').' ago'; }
-    return date('M j, Y', strtotime($datetime));
+    $now  = new DateTime('now', new DateTimeZone('Asia/Manila'));
+    $then = new DateTime($datetime, new DateTimeZone('Asia/Manila'));
+    $diff = $now->getTimestamp() - $then->getTimestamp();
+
+    if ($diff < 0)         return 'Just now';
+    if ($diff < 60)        return $diff . ' second' . ($diff != 1 ? 's' : '') . ' ago';
+    if ($diff < 3600)      { $m  = floor($diff / 60);       return $m  . ' minute' . ($m  != 1 ? 's' : '') . ' ago'; }
+    if ($diff < 86400)     { $h  = floor($diff / 3600);     return $h  . ' hour'   . ($h  != 1 ? 's' : '') . ' ago'; }
+    if ($diff < 604800)    { $d  = floor($diff / 86400);    return $d  . ' day'    . ($d  != 1 ? 's' : '') . ' ago'; }
+    if ($diff < 2592000)   { $w  = floor($diff / 604800);   return $w  . ' week'   . ($w  != 1 ? 's' : '') . ' ago'; }
+    if ($diff < 31536000)  { $mo = floor($diff / 2592000);  return $mo . ' month'  . ($mo != 1 ? 's' : '') . ' ago'; }
+    if ($diff < 315360000) { $y  = floor($diff / 31536000); return $y  . ' year'   . ($y  != 1 ? 's' : '') . ' ago'; }
+    $dec = floor($diff / 315360000);
+    return $dec . ' decade' . ($dec != 1 ? 's' : '') . ' ago';
 }
 
 // ─── Badges ───────────────────────────────────────────────────────

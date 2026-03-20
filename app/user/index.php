@@ -66,8 +66,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_feedback'])) {
     $check->execute([$feedback_id, $_SESSION['user_id']]);
 
     if ($check->fetch()) {
-        $pdo->prepare("DELETE FROM feedback_reviews WHERE feedback_id = ?")->execute([$feedback_id]);
-        $pdo->prepare("DELETE FROM feedback WHERE feedback_id = ? AND submitted_by = ?")->execute([$feedback_id, $_SESSION['user_id']]);
+       $pdo->prepare("DELETE FROM feedback_reviews  WHERE feedback_id = ?")->execute([$feedback_id]);
+$pdo->prepare("DELETE FROM review_requests   WHERE feedback_id = ?")->execute([$feedback_id]);
+$pdo->prepare("DELETE FROM feedback          WHERE feedback_id = ? AND submitted_by = ?")->execute([$feedback_id, $_SESSION['user_id']]);
         header("Location: " . BASE_URL . "/app/user/index.php?deleted=1");
         exit;
     } else {

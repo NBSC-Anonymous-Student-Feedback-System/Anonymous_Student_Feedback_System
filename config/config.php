@@ -16,6 +16,10 @@ try {
             PDO::ATTR_EMULATE_PREPARES   => false,
         ]
     );
+
+    // Sync MySQL timezone with Philippine Time
+    $pdo->exec("SET time_zone = '+08:00'");
+
 } catch (PDOException $e) {
     die('Database connection failed: ' . $e->getMessage());
 }

@@ -5,6 +5,47 @@ require_once __DIR__ . '/../../config/function.php';
 
 requireRole('staff');
 
+requireRole('staff');
+
+// ── Submit review request ──────────────────────────────────────────
+$requestMsg = ''; $requestErr = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_request'])) {
+    $fid     = (int)$_POST['feedback_id'];
+    $purpose = trim($_POST['purpose'] ?? '');
+
+    if (!isWithinOfficeHours()) {
+        $requestErr = offHoursMessage();
+    } elseif (strlen($purpose) < 10) {
+        $requestErr = 'Please provide a detailed purpose (at least 10 characters).';
+    } else {
+        $existing = $pdo->prepare("SELECT request_id, status FROM review_requests WHERE feedback_id=? AND requested_by=? AND status IN ('pending','approved')");
+        $existing->execute([$fid, $_SESSION['user_id']]);
+        $ex = $existing->fetch();
+
+        if ($ex && $ex['status'] === 'pending') {
+            $requestErr = 'You already have a pending review request for this feedback.';
+        } elseif ($ex && $ex['status'] === 'approved') {
+            header("Location: " . BASE_URL . "/app/manager/view-feedback.php?id=$fid&rid=" . $ex['request_id']);
+            exit;
+        } else {
+            $pdo->prepare("INSERT INTO review_requests (feedback_id, requested_by, purpose) VALUES (?,?,?)")
+                ->execute([$fid, $_SESSION['user_id'], $purpose]);
+
+            $admins = $pdo->query("SELECT user_id FROM users WHERE role='admin' AND status='active'")->fetchAll();
+            foreach ($admins as $a) {
+                $pdo->prepare("INSERT INTO notifications (user_id, title, message) VALUES (?,?,?)")
+                    ->execute([$a['user_id'], 'New Review Request',
+                        $_SESSION['first_name'] . ' ' . $_SESSION['last_name'] . " submitted a review request for Feedback #$fid."]);
+            }
+            logActivity($pdo, 'REVIEW_REQUEST', "Manager requested review of Feedback #$fid. Purpose: $purpose", $_SESSION['user_id']);
+
+            // Refresh dashboard after submission
+            header("Location: " . BASE_URL . "/app/manager/dashboard.php?requested=1");
+            exit;
+        }
+    }
+}
+
 $totalFeedback = $pdo->query("SELECT COUNT(*) FROM feedback")->fetchColumn();
 $urgentCount   = $pdo->query("SELECT COUNT(*) FROM feedback WHERE priority='Urgent'")->fetchColumn();
 $unreadNotif   = getUnreadNotifCount($pdo, $_SESSION['user_id']);
@@ -40,7 +81,7 @@ $allFeedback = $allFeedback->fetchAll();
     /* ── Navbar ── */
     .mgr-navbar {
       position: sticky; top: 0; z-index: 200;
-      background: #1a1f2e;
+      background: linear-gradient(135deg, #1e40af, #0ea5e9);
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 24px; height: 56px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.18);
@@ -107,10 +148,12 @@ $allFeedback = $allFeedback->fetchAll();
     }
 
     /* User chip */
+    
     .user-chip {
       display: flex; align-items: center; gap: 8px;
-      color: rgba(255,255,255,0.75); font-size: 13px;
+      color: rgba(255,255,255,0.85); font-size: 13px;
     }
+
     .user-avatar {
       width: 30px; height: 30px; border-radius: 50%;
       background: linear-gradient(135deg,#1a56db,#7e3af2);
@@ -228,6 +271,67 @@ $allFeedback = $allFeedback->fetchAll();
       thead th:nth-child(2), tbody td:nth-child(2) { display: none; }
       .user-chip .user-name { display: none; }
     }
+
+    /* ── Request Modal ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5); z-index: 400;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: #fff; border-radius: 14px;
+  width: 520px; max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  font-family: 'Inter', sans-serif;
+}
+.modal-header {
+  padding: 20px 24px; border-bottom: 1px solid #e5e7eb;
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.modal-title   { font-weight: 700; font-size: 15px; color: #111827; }
+.modal-sub     { font-size: 12px; color: #6b7280; margin-top: 3px; }
+.modal-close   { background: none; border: none; cursor: pointer; font-size: 22px; color: #9ca3af; line-height: 1; padding: 0; }
+.modal-close:hover { color: #374151; }
+.modal-body    { padding: 20px 24px; }
+.modal-fb-info {
+  background: #f9fafb; border-radius: 8px;
+  padding: 12px 14px; margin-bottom: 14px;
+  font-size: 13px; color: #6b7280;
+}
+.modal-privacy {
+  background: #fef3c7; border: 1px solid #fde68a;
+  border-radius: 8px; padding: 12px 14px;
+  margin-bottom: 16px; font-size: 12.5px; color: #92400e;
+}
+.modal-label { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; display: block; }
+.modal-textarea {
+  width: 100%; border: 1.5px solid #e5e7eb; border-radius: 9px;
+  padding: 10px 14px; font-family: 'Inter', sans-serif;
+  font-size: 13px; resize: vertical; min-height: 100px;
+  outline: none; transition: border-color 0.15s; color: #111827;
+}
+.modal-textarea:focus { border-color: #1e40af; }
+.modal-hint { font-size: 11.5px; color: #9ca3af; margin-top: 5px; }
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: 10px;
+  margin-top: 18px;
+}
+.btn-modal-cancel {
+  background: #f3f4f6; color: #374151; border: none;
+  border-radius: 8px; padding: 9px 18px; font-size: 13px;
+  font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif;
+  transition: background 0.15s;
+}
+.btn-modal-cancel:hover { background: #e5e7eb; }
+.btn-modal-submit {
+  background: linear-gradient(135deg, #1e40af, #0ea5e9);
+  color: #fff; border: none; border-radius: 8px;
+  padding: 9px 18px; font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  transition: opacity 0.15s;
+}
+.btn-modal-submit:hover { opacity: 0.88; }
   </style>
 </head>
 <body>
@@ -257,24 +361,7 @@ $allFeedback = $allFeedback->fetchAll();
 
 <!-- ── Hamburger Dropdown ── -->
 <div class="hamburger-menu" id="hamburgerMenu">
-  <span class="menu-section">Menu</span>
-  <a href="<?= BASE_URL ?>/app/manager/dashboard.php" class="menu-link active">
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-    Dashboard
-  </a>
-  <span class="menu-section">Feedback</span>
-  <a href="<?= BASE_URL ?>/app/manager/feedback.php" class="menu-link">
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-    All Feedback
-  </a>
-  <a href="<?= BASE_URL ?>/app/manager/notifications.php" class="menu-link">
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-    Notifications
-    <?php if ($unreadNotif > 0): ?>
-      <span style="margin-left:auto;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;"><?= $unreadNotif ?></span>
-    <?php endif; ?>
-  </a>
-  <hr class="menu-divider">
+ 
   <a href="<?= BASE_URL ?>/app/auth/logout.php" class="menu-link" style="color:rgba(239,68,68,0.8);">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
     Logout
@@ -288,6 +375,17 @@ $allFeedback = $allFeedback->fetchAll();
     <p>Welcome, <?= sanitize($_SESSION['first_name']) ?>. Review and manage submitted feedback.</p>
   </div>
 
+  <?php if (isset($_GET['requested'])): ?>
+  <div style="background:#f0fdf4;border:1px solid #16a34a;color:#166534;border-radius:10px;padding:12px 16px;font-size:13px;font-weight:500;margin-bottom:20px;">
+    ✅ Review request submitted. Waiting for admin approval.
+  </div>
+<?php endif; ?>
+<?php if ($requestErr): ?>
+  <div style="background:#fef2f2;border:1px solid #dc2626;color:#991b1b;border-radius:10px;padding:12px 16px;font-size:13px;font-weight:500;margin-bottom:20px;">
+    ⚠️ <?= sanitize($requestErr) ?>
+  </div>
+<?php endif; ?>
+
   <!-- Stats -->
   <div class="stats-row">
     <div class="stat-card blue">
@@ -299,6 +397,8 @@ $allFeedback = $allFeedback->fetchAll();
       <div class="stat-value"><?= $urgentCount ?></div>
     </div>
   </div>
+
+
 
   <!-- Filter Bar -->
   <div class="filter-bar">
@@ -387,16 +487,58 @@ $allFeedback = $allFeedback->fetchAll();
               <?php endif; ?>
             </td>
             <td>
-              <?php if ($isApproved): ?>
-                <a href="<?= BASE_URL ?>/app/manager/view-feedback.php?id=<?= $fb['feedback_id'] ?>" class="btn-view">🔓 View Feedback</a>
-              <?php else: ?>
-                <a href="<?= BASE_URL ?>/app/manager/feedback.php?request=<?= $fb['feedback_id'] ?>" class="btn-request">Request Access</a>
-              <?php endif; ?>
+             <?php if ($isApproved): ?>
+  <span style="font-size:12px;font-weight:600;color:#16a34a;">✅ Decrypted</span>
+             <?php else: ?>
+  <?php if ($reqStatus === 'pending'): ?>
+    <span style="font-size:12px;color:#d97706;">⏳ Awaiting Approval</span>
+  <?php else: ?>
+    <button class="btn-request"
+      onclick="openRequestModal(<?= $fb['feedback_id'] ?>, '<?= sanitize(categoryLabel($fb['category'])) ?>', '<?= $fb['priority'] ?>')">
+      Request Access
+    </button>
+  <?php endif; ?>
+<?php endif; ?>
             </td>
           </tr>
           <?php endforeach; endif; ?>
         </tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Request Access Modal ── -->
+<div class="modal-overlay" id="requestModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">🔍 Request Feedback Access</div>
+        <div class="modal-sub">This request will be logged and reviewed by the Admin.</div>
+      </div>
+      <button class="modal-close" onclick="closeRequestModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-fb-info" id="modalFbInfo"></div>
+      <div class="modal-privacy">
+        ⚠️ <strong>Data Privacy Notice:</strong> Your access request, stated purpose, and the time of access will be permanently logged for audit purposes.
+      </div>
+      <form method="POST">
+        <input type="hidden" name="feedback_id" id="modalFid">
+        <label class="modal-label">Why do you need to review this feedback? *</label>
+        <textarea
+          name="purpose"
+          class="modal-textarea"
+          minlength="10"
+          required
+          placeholder="State your official purpose clearly. Example: Investigating a reported academic integrity concern related to grading in the IT department..."
+        ></textarea>
+        <div class="modal-hint">Minimum 10 characters. Be specific — vague purposes will be rejected.</div>
+        <div class="modal-footer">
+          <button type="button" class="btn-modal-cancel" onclick="closeRequestModal()">Cancel</button>
+          <button type="submit" name="submit_request" class="btn-modal-submit">Submit Request</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -492,6 +634,19 @@ $allFeedback = $allFeedback->fetchAll();
 
   // Run on load to apply default "recent" filter
   renderTable();
+
+  function openRequestModal(fid, category, priority) {
+  document.getElementById('requestModal').classList.add('open');
+  document.getElementById('modalFid').value   = fid;
+  document.getElementById('modalFbInfo').textContent = 'Feedback #' + fid + ' · ' + category + ' · Priority: ' + priority;
+}
+function closeRequestModal() {
+  document.getElementById('requestModal').classList.remove('open');
+}
+// Close modal on overlay click
+document.getElementById('requestModal').addEventListener('click', function(e) {
+  if (e.target === this) closeRequestModal();
+});
 </script>
 </body>
 </html>

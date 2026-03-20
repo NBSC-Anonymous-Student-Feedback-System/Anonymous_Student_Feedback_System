@@ -5,66 +5,493 @@ require_once __DIR__ . '/../../config/function.php';
 
 requireRole('staff');
 
-require_once __DIR__ . '/../../includes/header.php';
-require_once __DIR__ . '/../../includes/sidebar.php';
-require_once __DIR__ . '/../../includes/footer.php';
-
 $totalFeedback = $pdo->query("SELECT COUNT(*) FROM feedback")->fetchColumn();
 $urgentCount   = $pdo->query("SELECT COUNT(*) FROM feedback WHERE priority='Urgent'")->fetchColumn();
-$recent        = $pdo->query("SELECT * FROM feedback ORDER BY submitted_at DESC LIMIT 8")->fetchAll();
+$unreadNotif   = getUnreadNotifCount($pdo, $_SESSION['user_id']);
 
-renderHeader('Manager Dashboard');
-renderSidebar('staff', 'Dashboard');
+// Fetch all feedback with approval status
+$allFeedback = $pdo->prepare("
+    SELECT f.*,
+           rr.status AS request_status,
+           rr.request_id
+    FROM feedback f
+    LEFT JOIN review_requests rr
+        ON f.feedback_id = rr.feedback_id
+        AND rr.requested_by = ?
+        AND rr.status = 'approved'
+    ORDER BY f.submitted_at DESC
+");
+$allFeedback->execute([$_SESSION['user_id']]);
+$allFeedback = $allFeedback->fetchAll();
 ?>
-<div class="topbar">
-  <span class="topbar-title">Dashboard</span>
-  <div class="topbar-actions">
-    <a href="<?= BASE_URL ?>/app/manager/notifications.php" class="notif-btn">
-      <?= svgIcon('bell') ?>
-      <?php if (getUnreadNotifCount($pdo, $_SESSION['user_id']) > 0): ?>
-        <span class="notif-dot"></span>
-      <?php endif; ?>
-    </a>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manager Dashboard — NBSC Feedback</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+  
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    /* ── Navbar ── */
+    .mgr-navbar {
+      position: sticky; top: 0; z-index: 200;
+      background: #1a1f2e;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 56px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    }
+    .navbar-left  { display: flex; align-items: center; gap: 14px; }
+    .navbar-right { display: flex; align-items: center; gap: 12px; }
+
+    .brand-name { color: #fff; font-size: 15px; font-weight: 700; }
+    .brand-sub  { color: rgba(255,255,255,0.45); font-size: 11px; }
+
+    /* Hamburger */
+    .hamburger-btn {
+      background: none; border: none; cursor: pointer;
+      display: flex; flex-direction: column; gap: 5px; padding: 4px;
+    }
+    .hamburger-btn span {
+      display: block; width: 22px; height: 2px;
+      background: rgba(255,255,255,0.8); border-radius: 2px;
+      transition: all 0.2s;
+    }
+
+    /* Dropdown menu */
+    .hamburger-menu {
+      position: absolute; top: 56px; right: 0;
+      background: #1a1f2e; width: 220px;
+      border-right: 1px solid rgba(255,255,255,0.08);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      border-radius: 0 0 12px 0;
+      padding: 10px 0 16px;
+      display: none; z-index: 300;
+      box-shadow: 4px 4px 16px rgba(0,0,0,0.2);
+    }
+    .hamburger-menu.open { display: block; }
+
+    .menu-section {
+      font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.35);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 10px 20px 4px;
+    }
+    .menu-link {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 20px; font-size: 13.5px; font-weight: 500;
+      color: rgba(255,255,255,0.65); text-decoration: none;
+      transition: all 0.15s;
+    }
+    .menu-link:hover { color: #fff; background: rgba(255,255,255,0.06); }
+    .menu-link.active { color: #fff; background: rgba(255,255,255,0.1); border-left: 3px solid #1a56db; }
+    .menu-link svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .menu-divider { border-color: rgba(255,255,255,0.08); margin: 8px 0; }
+
+    /* Notification bell */
+    .notif-btn {
+      position: relative; color: rgba(255,255,255,0.7);
+      background: none; border: none; cursor: pointer;
+      display: flex; align-items: center; padding: 4px;
+      text-decoration: none;
+    }
+    .notif-btn:hover { color: #fff; }
+    .notif-btn svg { width: 20px; height: 20px; }
+    .notif-dot {
+      position: absolute; top: 2px; right: 2px;
+      width: 8px; height: 8px; background: #ef4444;
+      border-radius: 50%; border: 2px solid #1a1f2e;
+    }
+
+    /* User chip */
+    .user-chip {
+      display: flex; align-items: center; gap: 8px;
+      color: rgba(255,255,255,0.75); font-size: 13px;
+    }
+    .user-avatar {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: linear-gradient(135deg,#1a56db,#7e3af2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
+    }
+
+    /* Logout */
+    .logout-btn {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 7px; color: rgba(255,255,255,0.7);
+      font-size: 12px; font-weight: 500; padding: 5px 12px;
+      cursor: pointer; text-decoration: none; transition: all 0.15s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .logout-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+    .logout-btn svg { width: 14px; height: 14px; }
+
+    /* ── Page Content ── */
+    .page-wrap {
+      max-width: 1100px; margin: 0 auto;
+      padding: 32px 20px;
+    }
+
+    .page-header { margin-bottom: 24px; }
+    .page-header h1 { font-size: 22px; font-weight: 700; margin: 0 0 4px; color: #111827; }
+    .page-header p  { color: #6b7280; font-size: 13.5px; margin: 0; }
+
+    /* Stats */
+    .stats-row {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 16px; margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #fff; border-radius: 14px;
+      border: 1px solid #e5e7eb; padding: 22px 24px;
+    }
+    .stat-label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .stat-value { font-size: 32px; font-weight: 700; }
+    .stat-card.blue .stat-value { color: #1d4ed8; }
+    .stat-card.red  .stat-value { color: #dc2626; }
+
+    /* Filter bar */
+    .filter-bar {
+      background: #fff; border-radius: 12px;
+      border: 1px solid #e5e7eb; padding: 14px 18px;
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .filter-bar label { font-size: 12px; font-weight: 600; color: #6b7280; white-space: nowrap; }
+    .filter-select {
+      border: 1.5px solid #e5e7eb; border-radius: 8px;
+      padding: 7px 12px; font-size: 13px; font-family: inherit;
+      color: #374151; background: #fafafa; cursor: pointer;
+      outline: none; transition: border-color 0.15s;
+    }
+    .filter-select:focus { border-color: #1a56db; }
+
+    /* Table card */
+    .table-card {
+      background: #fff; border-radius: 14px;
+      border: 1px solid #e5e7eb; overflow: hidden;
+    }
+    .table-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid #f3f4f6;
+    }
+    .table-card-title { font-size: 14px; font-weight: 600; color: #111827; }
+    .result-count { font-size: 12px; color: #6b7280; }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      font-size: 11px; font-weight: 600; color: #6b7280;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 10px 16px; background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb; text-align: left;
+    }
+    tbody td { padding: 13px 16px; font-size: 13.5px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: #fafafa; }
+
+    .msg-cell { color: #6b7280; font-size: 13px; }
+    .msg-decrypted { color: #111827; font-size: 13px; max-width: 300px; }
+    .time-cell { color: #9ca3af; font-size: 12px; white-space: nowrap; }
+
+    .btn-request {
+      background: linear-gradient(135deg,#1a56db,#7e3af2);
+      color: #fff; border: none; border-radius: 7px;
+      padding: 6px 14px; font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: inherit; white-space: nowrap;
+      text-decoration: none; display: inline-block; transition: opacity 0.15s;
+    }
+    .btn-request:hover { opacity: 0.88; color: #fff; }
+
+    .btn-view {
+      background: #f0fdf4; color: #16a34a;
+      border: 1.5px solid #16a34a; border-radius: 7px;
+      padding: 6px 14px; font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: inherit; white-space: nowrap;
+      text-decoration: none; display: inline-block; transition: all 0.15s;
+    }
+    .btn-view:hover { background: #dcfce7; color: #16a34a; }
+
+    .badge-no-request { background: #f3f4f6; color: #6b7280; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; }
+    .badge-pending    { background: #fef3c7; color: #d97706; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; }
+    .badge-approved   { background: #d1fae5; color: #065f46; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; }
+    .badge-rejected   { background: #fef2f2; color: #dc2626; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; }
+
+    .empty-row td { text-align: center; padding: 40px; color: #9ca3af; font-size: 13.5px; }
+
+    @media (max-width: 640px) {
+      .stats-row { grid-template-columns: 1fr; }
+      .filter-bar { flex-direction: column; align-items: flex-start; }
+      thead th:nth-child(2), tbody td:nth-child(2) { display: none; }
+      .user-chip .user-name { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navbar ── -->
+<nav class="mgr-navbar">
+  <div class="navbar-left">
+    <div>
+      <div class="brand-name">NBSC Feedback</div>
+      <div class="brand-sub">Anonymous Feedback System</div>
+    </div>
   </div>
+  <div class="navbar-right">
+    <a href="<?= BASE_URL ?>/app/manager/notifications.php" class="notif-btn">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+      <?php if ($unreadNotif > 0): ?><span class="notif-dot"></span><?php endif; ?>
+    </a>
+    <div class="user-chip">
+      <div class="user-avatar"><?= strtoupper(substr($_SESSION['first_name'], 0, 1)) ?></div>
+      <span class="user-name"><?= sanitize($_SESSION['first_name'] . ' ' . $_SESSION['last_name']) ?></span>
+    </div>
+    <button class="hamburger-btn" onclick="toggleMenu()" id="hamburgerBtn" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- ── Hamburger Dropdown ── -->
+<div class="hamburger-menu" id="hamburgerMenu">
+  <span class="menu-section">Menu</span>
+  <a href="<?= BASE_URL ?>/app/manager/dashboard.php" class="menu-link active">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+    Dashboard
+  </a>
+  <span class="menu-section">Feedback</span>
+  <a href="<?= BASE_URL ?>/app/manager/feedback.php" class="menu-link">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+    All Feedback
+  </a>
+  <a href="<?= BASE_URL ?>/app/manager/notifications.php" class="menu-link">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+    Notifications
+    <?php if ($unreadNotif > 0): ?>
+      <span style="margin-left:auto;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;"><?= $unreadNotif ?></span>
+    <?php endif; ?>
+  </a>
+  <hr class="menu-divider">
+  <a href="<?= BASE_URL ?>/app/auth/logout.php" class="menu-link" style="color:rgba(239,68,68,0.8);">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+    Logout
+  </a>
 </div>
-<div class="content">
+
+<!-- ── Page Content ── -->
+<div class="page-wrap">
   <div class="page-header">
     <h1>Manager Dashboard</h1>
     <p>Welcome, <?= sanitize($_SESSION['first_name']) ?>. Review and manage submitted feedback.</p>
   </div>
-  <div class="stats-grid">
-    <div class="stat-card blue"><div class="stat-label">Total Feedback</div><div class="stat-value"><?= $totalFeedback ?></div></div>
-    <div class="stat-card red"><div class="stat-label">Urgent</div><div class="stat-value"><?= $urgentCount ?></div></div>
-  </div>
-  <div class="card">
-    <div class="card-header">
-      <span class="card-title">Recent Feedback</span>
-      <a href="<?= BASE_URL ?>/app/manager/feedback.php" class="btn btn-outline btn-sm">View All</a>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card blue">
+      <div class="stat-label">Total Feedback</div>
+      <div class="stat-value"><?= $totalFeedback ?></div>
     </div>
-    <div class="table-wrap">
-      <table>
+    <div class="stat-card red">
+      <div class="stat-label">Urgent</div>
+      <div class="stat-value"><?= $urgentCount ?></div>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <label>Filter by:</label>
+    <select class="filter-select" id="filterTime" onchange="applyFilter('time')">
+      <option value="recent">Recent Feedback</option>
+      <option value="older">Previous Feedback</option>
+    </select>
+    <select class="filter-select" id="filterCategory" onchange="applyFilter('category')">
+      <option value="">All Categories</option>
+      <option value="general">General</option>
+      <option value="academic">Academic</option>
+      <option value="facilities">Facilities</option>
+      <option value="services">Services</option>
+      <option value="faculty">Faculty</option>
+      <option value="administration">Administration</option>
+      <option value="suggestion">Suggestion</option>
+      <option value="complaint">Complaint</option>
+      <option value="other">Other</option>
+    </select>
+    <select class="filter-select" id="filterPriority" onchange="applyFilter('priority')">
+      <option value="">All Priorities</option>
+      <option value="Urgent">Urgent</option>
+      <option value="High">High</option>
+      <option value="Medium">Medium</option>
+      <option value="Low">Low</option>
+    </select>
+    <span id="resultCount" class="result-count"></span>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <span class="table-card-title" id="tableTitle">Recent Feedback</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table id="feedbackTable">
         <thead>
           <tr>
+            <th>#</th>
             <th>Category</th>
             <th>Message</th>
             <th>Priority</th>
             <th>Submitted</th>
+            <th>Request Status</th>
             <th>Action</th>
           </tr>
         </thead>
-        <tbody>
-          <?php foreach ($recent as $fb): ?>
-          <tr>
-            <td><?= sanitize(categoryLabel($fb['category'])) ?></td>
-            <td><span class="msg-truncate">🔒 Encrypted</span></td>
+        <tbody id="feedbackBody">
+          <?php if (empty($allFeedback)): ?>
+            <tr class="empty-row"><td colspan="7">No feedback found.</td></tr>
+          <?php else: $i = 1; foreach ($allFeedback as $fb):
+            $isApproved = $fb['request_status'] === 'approved';
+            $plain      = $isApproved ? sanitize(decryptMessage($fb['message_enc'])) : null;
+
+            // Determine request status for this feedback
+            $reqStmt = $pdo->prepare("SELECT status FROM review_requests WHERE feedback_id = ? AND requested_by = ? ORDER BY requested_at DESC LIMIT 1");
+            $reqStmt->execute([$fb['feedback_id'], $_SESSION['user_id']]);
+            $reqStatus = $reqStmt->fetchColumn();
+          ?>
+          <tr
+            data-category="<?= $fb['category'] ?>"
+            data-priority="<?= $fb['priority'] ?>"
+            data-time="<?= strtotime($fb['submitted_at']) ?>"
+          >
+            <td><?= $i++ ?></td>
+            <td><?= categoryIcon($fb['category']) ?> <?= sanitize(categoryLabel($fb['category'])) ?></td>
+            <td>
+              <?php if ($isApproved): ?>
+                <span class="msg-decrypted"><?= $plain ?></span>
+              <?php else: ?>
+                <span class="msg-cell">🔒 Encrypted</span>
+              <?php endif; ?>
+            </td>
             <td><?= priorityBadge($fb['priority']) ?></td>
-            <td class="text-muted"><?= timeAgo($fb['submitted_at']) ?></td>
-            <td><a href="<?= BASE_URL ?>/app/manager/feedback.php?view=<?= $fb['feedback_id'] ?>" class="btn btn-outline btn-sm">Review</a></td>
+            <td class="time-cell"><?= timeAgo($fb['submitted_at']) ?></td>
+            <td>
+              <?php if ($isApproved): ?>
+                <span class="badge-approved">Approved</span>
+              <?php elseif ($reqStatus === 'pending'): ?>
+                <span class="badge-pending">Pending</span>
+              <?php elseif ($reqStatus === 'rejected'): ?>
+                <span class="badge-rejected">Rejected</span>
+              <?php else: ?>
+                <span class="badge-no-request">No Request</span>
+              <?php endif; ?>
+            </td>
+            <td>
+              <?php if ($isApproved): ?>
+                <a href="<?= BASE_URL ?>/app/manager/view-feedback.php?id=<?= $fb['feedback_id'] ?>" class="btn-view">🔓 View Feedback</a>
+              <?php else: ?>
+                <a href="<?= BASE_URL ?>/app/manager/feedback.php?request=<?= $fb['feedback_id'] ?>" class="btn-request">Request Access</a>
+              <?php endif; ?>
+            </td>
           </tr>
-          <?php endforeach; ?>
+          <?php endforeach; endif; ?>
         </tbody>
       </table>
     </div>
   </div>
 </div>
-<?php renderSidebarClose(); renderFooter(); ?>
+
+<script>
+  // ── Hamburger ──
+  function toggleMenu() {
+    document.getElementById('hamburgerMenu').classList.toggle('open');
+  }
+  document.addEventListener('click', function(e) {
+    const menu = document.getElementById('hamburgerMenu');
+    const btn  = document.getElementById('hamburgerBtn');
+    if (!menu.contains(e.target) && !btn.contains(e.target)) {
+      menu.classList.remove('open');
+    }
+  });
+
+  // ── Filter logic: only one dropdown active at a time ──
+  let activeFilter = 'time'; // default
+
+  function applyFilter(changedBy) {
+    // Reset the other two dropdowns when one changes
+    if (changedBy === 'time') {
+      document.getElementById('filterCategory').value = '';
+      document.getElementById('filterPriority').value = '';
+      activeFilter = 'time';
+    } else if (changedBy === 'category') {
+      document.getElementById('filterTime').value     = 'recent';
+      document.getElementById('filterPriority').value = '';
+      activeFilter = 'category';
+    } else if (changedBy === 'priority') {
+      document.getElementById('filterTime').value     = 'recent';
+      document.getElementById('filterCategory').value = '';
+      activeFilter = 'priority';
+    }
+    renderTable();
+  }
+
+  function renderTable() {
+    const timeVal     = document.getElementById('filterTime').value;
+    const categoryVal = document.getElementById('filterCategory').value;
+    const priorityVal = document.getElementById('filterPriority').value;
+
+    const rows   = document.querySelectorAll('#feedbackBody tr[data-time]');
+    const now    = Math.floor(Date.now() / 1000);
+    const dayAgo = now - (24 * 60 * 60); // last 24 hours = "recent"
+
+    let visible = 0;
+
+    rows.forEach(row => {
+      const cat      = row.dataset.category;
+      const pri      = row.dataset.priority;
+      const rowTime  = parseInt(row.dataset.time);
+      let   show     = true;
+
+      if (activeFilter === 'time') {
+        if (timeVal === 'recent') show = rowTime >= dayAgo;
+        if (timeVal === 'older')  show = rowTime < dayAgo;
+      } else if (activeFilter === 'category') {
+        if (categoryVal) show = (cat === categoryVal);
+      } else if (activeFilter === 'priority') {
+        if (priorityVal) show = (pri === priorityVal);
+      }
+
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+
+    // Update title and count
+    const titles = {
+      time: timeVal === 'recent' ? 'Recent Feedback' : 'Previous Feedback',
+      category: categoryVal ? categoryVal.charAt(0).toUpperCase() + categoryVal.slice(1) + ' Feedback' : 'All Feedback',
+      priority: priorityVal ? priorityVal + ' Priority Feedback' : 'All Feedback',
+    };
+    document.getElementById('tableTitle').textContent  = titles[activeFilter];
+    document.getElementById('resultCount').textContent = visible + ' result' + (visible !== 1 ? 's' : '');
+
+    // Show empty state if none visible
+    let emptyRow = document.getElementById('emptyRow');
+    if (visible === 0) {
+      if (!emptyRow) {
+        emptyRow = document.createElement('tr');
+        emptyRow.id = 'emptyRow';
+        emptyRow.className = 'empty-row';
+        emptyRow.innerHTML = '<td colspan="7">No feedback matches this filter.</td>';
+        document.getElementById('feedbackBody').appendChild(emptyRow);
+      }
+      emptyRow.style.display = '';
+    } else if (emptyRow) {
+      emptyRow.style.display = 'none';
+    }
+  }
+
+  // Run on load to apply default "recent" filter
+  renderTable();
+</script>
+</body>
+</html>

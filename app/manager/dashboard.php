@@ -611,9 +611,28 @@ $allFeedback = $allFeedback->fetchAll();
         if (priorityVal) show = (pri === priorityVal);
       }
 
-      row.style.display = show ? '' : 'none';
+     row.style.display = show ? '' : 'none';
       if (show) visible++;
     });
+
+    // ── Sort rows based on filter ──
+    const tbody   = document.getElementById('feedbackBody');
+    const visRows = Array.from(rows).filter(r => r.dataset.time && r.style.display !== 'none');
+
+    visRows.sort((a, b) => {
+      const timeA = parseInt(a.dataset.time);
+      const timeB = parseInt(b.dataset.time);
+      if (activeFilter === 'time' && timeVal === 'older') {
+        return timeA - timeB; // oldest first (ASC) for Previous Feedback
+      }
+      return timeB - timeA; // newest first (DESC) for everything else
+    });
+
+    visRows.forEach(row => tbody.appendChild(row));
+
+    // Update title and count
+    
+
 
     // Update title and count
     const titles = {

@@ -194,6 +194,26 @@ $categories = ['general','academic','facilities','services','faculty','administr
       .user-chip .user-name { display: none; }
       .filter-bar { flex-direction: column; align-items: flex-start; }
     }
+
+    /* Pagination */
+.pagination-wrap {
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 10px;
+  padding: 16px 20px 20px; border-top: 1px solid #f3f4f6;
+}
+.pagination-info { font-size: 12px; color: #6b7280; }
+.pagination-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.page-btn {
+  min-width: 34px; height: 34px; border-radius: 8px;
+  border: 1.5px solid #e5e7eb; background: #fff;
+  font-size: 13px; font-weight: 600; color: #374151;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; padding: 0 8px;
+}
+.page-btn:hover   { border-color: #1e40af; color: #1e40af; background: #eff6ff; }
+.page-btn.active  { background: linear-gradient(135deg, #1e40af, #0ea5e9); color: #fff; border-color: transparent; }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -294,7 +314,7 @@ $categories = ['general','academic','facilities','services','faculty','administr
     </select>
     <span id="resultCount" style="font-size:12px;color:#6b7280;"></span>
   </div>
-
+       
   <div class="table-card">
     <div class="table-card-header">
      <span class="table-card-title" id="tableTitle">All Feedback</span>
@@ -326,10 +346,19 @@ $categories = ['general','academic','facilities','services','faculty','administr
      <tbody id="feedbackBody">
       </table>
     </div>
+
+      <!-- Pagination -->
+    <div class="pagination-wrap" id="paginationWrap" style="display:none;">
+      <span class="pagination-info" id="paginationInfo"></span>
+      <div class="pagination-btns" id="pageButtons"></div>
+    </div>
+
   </div>
 </div>
 
 <script>
+  
+  // ── Hamburger ──
   function toggleMenu() {
     document.getElementById('hamburgerMenu').classList.toggle('open');
   }
@@ -341,43 +370,124 @@ $categories = ['general','academic','facilities','services','faculty','administr
     }
   });
 
+  // ── Filter + Pagination ──
+  const ROWS_PER_PAGE = 10;
+  let currentPage    = 1;
+  let filteredRows   = [];
+
   function applyFilter() {
     const priority = document.getElementById('filterPriority').value;
     const category = document.getElementById('filterCategory').value;
-    const rows     = document.querySelectorAll('#feedbackBody tr[data-priority]');
+    const allRows  = Array.from(document.querySelectorAll('#feedbackBody tr[data-priority]'));
 
-    let visible = 0;
-    rows.forEach(row => {
+    filteredRows = allRows.filter(row => {
       const matchPri = !priority || row.dataset.priority === priority;
       const matchCat = !category || row.dataset.category === category;
-      const show     = matchPri && matchCat;
-      row.style.display = show ? '' : 'none';
-      if (show) visible++;
+      return matchPri && matchCat;
     });
 
     // Update title
     let title = 'All Feedback';
-    if (priority && category)   title = priority + ' · ' + category.charAt(0).toUpperCase() + category.slice(1);
-    else if (priority)           title = priority + ' Priority Feedback';
-    else if (category)           title = category.charAt(0).toUpperCase() + category.slice(1) + ' Feedback';
-    document.getElementById('tableTitle').textContent  = title;
-    document.getElementById('resultCount').textContent = visible + ' result' + (visible !== 1 ? 's' : '');
+    if (priority && category)  title = priority + ' · ' + category.charAt(0).toUpperCase() + category.slice(1);
+    else if (priority)          title = priority + ' Priority Feedback';
+    else if (category)          title = category.charAt(0).toUpperCase() + category.slice(1) + ' Feedback';
+    document.getElementById('tableTitle').textContent = title;
 
-    // Empty state
-    let emptyRow = document.getElementById('emptyFilterRow');
-    if (visible === 0) {
-      if (!emptyRow) {
-        emptyRow = document.createElement('tr');
-        emptyRow.id        = 'emptyFilterRow';
-        emptyRow.className = 'empty-row';
-        emptyRow.innerHTML = '<td colspan="5">No feedback matches this filter.</td>';
-        document.getElementById('feedbackBody').appendChild(emptyRow);
-      }
-      emptyRow.style.display = '';
-    } else if (emptyRow) {
-      emptyRow.style.display = 'none';
-    }
+    currentPage = 1;
+    renderPage();
   }
+
+  function renderPage() {
+    const allRows = Array.from(document.querySelectorAll('#feedbackBody tr[data-priority]'));
+
+    // Hide all first
+    allRows.forEach(r => r.style.display = 'none');
+
+    // Remove old empty state
+    const oldEmpty = document.getElementById('emptyFilterRow');
+    if (oldEmpty) oldEmpty.remove();
+
+    if (filteredRows.length === 0) {
+      const emptyRow = document.createElement('tr');
+      emptyRow.id        = 'emptyFilterRow';
+      emptyRow.className = 'empty-row';
+      emptyRow.innerHTML = '<td colspan="5">No feedback matches this filter.</td>';
+      document.getElementById('feedbackBody').appendChild(emptyRow);
+      document.getElementById('paginationWrap').style.display = 'none';
+      document.getElementById('resultCount').textContent = '0 results';
+      return;
+    }
+
+    // Slice for current page
+    const start  = (currentPage - 1) * ROWS_PER_PAGE;
+    const end    = start + ROWS_PER_PAGE;
+    const pageRows = filteredRows.slice(start, end);
+    pageRows.forEach(r => r.style.display = '');
+
+    // Update result count
+    document.getElementById('resultCount').textContent =
+      'Showing ' + (start + 1) + '–' + Math.min(end, filteredRows.length) + ' of ' + filteredRows.length + ' results';
+
+    // Render pagination
+    renderPagination();
+  }
+
+  function renderPagination() {
+    const totalPages = Math.ceil(filteredRows.length / ROWS_PER_PAGE);
+    const wrap       = document.getElementById('paginationWrap');
+    const btns       = document.getElementById('pageButtons');
+
+    if (totalPages <= 1) {
+      wrap.style.display = 'none';
+      return;
+    }
+
+    wrap.style.display = 'flex';
+    btns.innerHTML     = '';
+
+    // Prev
+    const prev = document.createElement('button');
+    prev.className = 'page-btn';
+    prev.textContent = '←';
+    prev.disabled  = currentPage === 1;
+    prev.onclick   = () => { currentPage--; renderPage(); };
+    btns.appendChild(prev);
+
+    // Page numbers
+    for (let i = 1; i <= totalPages; i++) {
+      // Show first, last, current ±1, and ellipsis
+      if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+        const btn = document.createElement('button');
+        btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
+        btn.textContent = i;
+        btn.onclick = (function(page) {
+          return function() { currentPage = page; renderPage(); };
+        })(i);
+        btns.appendChild(btn);
+      } else if (i === currentPage - 2 || i === currentPage + 2) {
+        const dots = document.createElement('span');
+        dots.textContent = '…';
+        dots.style.cssText = 'color:#9ca3af;font-size:13px;padding:0 4px;';
+        btns.appendChild(dots);
+      }
+    }
+
+    // Next
+    const next = document.createElement('button');
+    next.className = 'page-btn';
+    next.textContent = '→';
+    next.disabled  = currentPage === totalPages;
+    next.onclick   = () => { currentPage++; renderPage(); };
+    btns.appendChild(next);
+
+    // Info
+    document.getElementById('paginationInfo').textContent =
+      'Page ' + currentPage + ' of ' + totalPages;
+  }
+
+  // Init on load
+  applyFilter();
+
 </script>
 </body>
 </html>

@@ -85,10 +85,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         🔒 Your identity is protected — feedback is fully anonymous
       </p>
     </div>
-
-    <p style="text-align:center;margin-top:16px;font-size:12px;color:#9ca3af;">
-      Staff or Admin? <a href="<?= BASE_URL ?>/app/auth/admin-login.php" style="color:#1a56db;">Login here</a>
-    </p>
   </div>
 </body>
 </html>

@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
     $allowed_cats = ['general','academic','facilities','services','faculty','administration','suggestion','complaint','other'];
     $allowed_pri  = ['Low','Medium','High','Urgent'];
 
-    if (in_array($category, $allowed_cats) && in_array($priority, $allowed_pri) && strlen($message) >= 10 && strlen($message) <= 200) {
+    if (in_array($category, $allowed_cats) && in_array($priority, $allowed_pri) && strlen($message) >= 10 && strlen($message) <= 1000) {
         $encMessage  = encryptMessage($message);
         $hashMessage = hashMessage($message);
         $pdo->prepare("INSERT INTO feedback (category, priority, message_enc, message_hash, submitted_by) VALUES (?,?,?,?,?)")
@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
         header("Location: " . BASE_URL . "/app/user/index.php?submitted=1");
         exit;
     } else {
-        $err = 'Please fill all fields. Message must be 10–200 characters.';
+        $err = 'Please fill all fields. Message must be 10–1000 characters.';
     }
 }
 
@@ -225,7 +225,7 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
     .pri-btn.sel-Urgent { border-color: #dc2626; background: #fef2f2; color: #dc2626; }
 
     .section-label { font-size: 11.5px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
-    .msg-area { width: 100%; border: 2px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; font-family: 'Inter', sans-serif; font-size: 13.5px; resize: none; outline: none; transition: border-color 0.15s; min-height: 96px; line-height: 1.6; }
+    .msg-area { width: 100%; border: 2px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; font-family: 'Inter', sans-serif; font-size: 13.5px; resize: none; outline: none; transition: border-color 0.15s; min-height: 200px; line-height: 1.6; }
     .msg-area:focus { border-color: #1e40af; }
     .char-count { font-size: 11.5px; color: #6b7280; text-align: right; margin-top: 5px; }
     .submit-btn { width: 100%; padding: 13px; background: linear-gradient(135deg, #1e40af, #0ea5e9); color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 16px; font-family: 'Inter', sans-serif; transition: opacity 0.15s; }
@@ -446,10 +446,10 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
             </div>
             <input type="hidden" name="priority" id="priority-input" value="Low">
             <div class="section-label">Your Message</div>
-            <textarea name="message" id="msg-input" class="msg-area" maxlength="200"
+            <textarea name="message" id="msg-input" class="msg-area" maxlength="1000"
               placeholder="Describe your concern clearly. Avoid sharing personal details about yourself or others..."
               required oninput="updateCount()"></textarea>
-            <div class="char-count"><span id="char-count">0</span>/200</div>
+            <div class="char-count"><span id="char-count">0</span>/1000</div>
             <button type="submit" name="submit_feedback" class="submit-btn">Send Anonymously 🔒</button>
           </form>
         </div>

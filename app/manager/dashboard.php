@@ -403,8 +403,6 @@ $allFeedback = $allFeedback->fetchAll();
     </div>
   </div>
 
-
-
   <!-- Filter Bar -->
   <div class="filter-bar">
     <label>Filter by:</label>

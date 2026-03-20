@@ -41,16 +41,31 @@ $unreadNotif = getUnreadNotifCount($pdo, $_SESSION['user_id']);
     .brand-name { color: #fff; font-size: 15px; font-weight: 700; }
     .brand-sub  { color: rgba(255,255,255,0.65); font-size: 11px; }
 
+   .mgr-navbar {
+      position: sticky; top: 0; z-index: 200;
+      background: linear-gradient(135deg, #1e40af, #0ea5e9);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 56px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    }
+    .navbar-left  { display: flex; align-items: center; gap: 14px; }
+    .navbar-right { display: flex; align-items: center; gap: 12px; }
+
+    .brand-name { color: #fff; font-size: 15px; font-weight: 700; }
+    .brand-sub  { color: rgba(255,255,255,0.45); font-size: 11px; }
+
+    /* Hamburger */
     .hamburger-btn {
       background: none; border: none; cursor: pointer;
       display: flex; flex-direction: column; gap: 5px; padding: 4px;
     }
     .hamburger-btn span {
       display: block; width: 22px; height: 2px;
-      background: rgba(255,255,255,0.85); border-radius: 2px;
+      background: rgba(255,255,255,0.8); border-radius: 2px;
       transition: all 0.2s;
     }
 
+    /* Dropdown menu */
     .hamburger-menu {
       position: absolute; top: 56px; right: 0;
       background: #1a1f2e; width: 220px;
@@ -61,26 +76,27 @@ $unreadNotif = getUnreadNotifCount($pdo, $_SESSION['user_id']);
       display: none; z-index: 300;
       box-shadow: 4px 4px 16px rgba(0,0,0,0.2);
     }
-    .hamburger-menu.open { display: block}; 
+    .hamburger-menu.open { display: block; }
 
     .menu-section {
-      font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.45);
+      font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.35);
       text-transform: uppercase; letter-spacing: 0.08em;
-      padding: 10px 20px 4px; display: block;
+      padding: 10px 20px 4px;
     }
     .menu-link {
       display: flex; align-items: center; gap: 10px;
       padding: 9px 20px; font-size: 13.5px; font-weight: 500;
-      color: rgba(255,255,255,0.75); text-decoration: none;
+      color: rgba(255,255,255,0.65); text-decoration: none;
       transition: all 0.15s;
     }
-    .menu-link:hover  { color: #fff; background: rgba(255,255,255,0.1); }
-    .menu-link.active { color: #fff; background: rgba(255,255,255,0.15); border-left: 3px solid #7dd3fc; }
+    .menu-link:hover { color: #fff; background: rgba(255,255,255,0.06); }
+    .menu-link.active { color: #fff; background: rgba(255,255,255,0.1); border-left: 3px solid #1a56db; }
     .menu-link svg { width: 16px; height: 16px; flex-shrink: 0; }
-    .menu-divider { border-color: rgba(255,255,255,0.12); margin: 8px 0; }
+    .menu-divider { border-color: rgba(255,255,255,0.08); margin: 8px 0; }
 
+    /* Notification bell */
     .notif-btn {
-      position: relative; color: rgba(255,255,255,0.8);
+      position: relative; color: rgba(255,255,255,0.7);
       background: none; border: none; cursor: pointer;
       display: flex; align-items: center; padding: 4px;
       text-decoration: none;
@@ -90,19 +106,35 @@ $unreadNotif = getUnreadNotifCount($pdo, $_SESSION['user_id']);
     .notif-dot {
       position: absolute; top: 2px; right: 2px;
       width: 8px; height: 8px; background: #ef4444;
-      border-radius: 50%; border: 2px solid #1e40af;
+      border-radius: 50%; border: 2px solid #1a1f2e;
     }
 
+    /* User chip */
+    
     .user-chip {
       display: flex; align-items: center; gap: 8px;
       color: rgba(255,255,255,0.85); font-size: 13px;
     }
+
     .user-avatar {
       width: 30px; height: 30px; border-radius: 50%;
       background: linear-gradient(135deg,#1a56db,#7e3af2);
       display: flex; align-items: center; justify-content: center;
       font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
     }
+
+    /* Logout */
+    .logout-btn {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 7px; color: rgba(255,255,255,0.7);
+      font-size: 12px; font-weight: 500; padding: 5px 12px;
+      cursor: pointer; text-decoration: none; transition: all 0.15s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .logout-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+    .logout-btn svg { width: 14px; height: 14px; }
+
 
     /* ── Page ── */
     .page-wrap { max-width: 800px; margin: 0 auto; padding: 32px 20px; }

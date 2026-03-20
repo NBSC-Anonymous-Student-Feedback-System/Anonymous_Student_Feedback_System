@@ -3,6 +3,14 @@ START TRANSACTION;
 CREATE DATABASE IF NOT EXISTS working_schema;
 USE working_schema;
 
+-- Drop tables in reverse order (to respect foreign key constraints)
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS feedback_reviews;
+DROP TABLE IF EXISTS review_requests;
+DROP TABLE IF EXISTS activity_logs;
+DROP TABLE IF EXISTS feedback;
+DROP TABLE IF EXISTS users;
+
 -- USERS
 CREATE TABLE users (
     user_id    INT PRIMARY KEY AUTO_INCREMENT,
@@ -18,13 +26,13 @@ CREATE TABLE users (
 );
 
 INSERT INTO users (school_id, first_name, last_name, email, password, role, department, status) VALUES
-('ADM-001',    'Admin',   'NBSC',       '20231671@nbsc.edu.ph',     '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin',   'Administration', 'active'),
-('S-0008',     'Erick James',    'Rubin', 'r.villanueva@nbsc.edu.ph', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'staff',   'SAS',            'active'),
-('2024-00102', 'Rhics',   'Geonzon',    '20231317@nbsc.edu.ph',     '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'IT',             'active'),
-('2023-00045', 'Troy',    'Rojo',       't.rojo@nbsc.edu.ph',       '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'Business',       'inactive'),
-('2023-00121', 'Francis', 'Idul',       '20231685@nbsc.edu.ph',     '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'IT',             'active');
+('ADM-001',    'Admin',       'NBSC',    '20231671@nbsc.edu.ph',     '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin',   'Administration', 'active'),
+('S-0008',     'Erick James', 'Rubin',   'r.villanueva@nbsc.edu.ph', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'staff',   'SAS',            'active'),
+('2024-00102', 'Rhics',       'Geonzon', '20231317@nbsc.edu.ph',     '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'IT',             'active'),
+('2023-00045', 'Troy',        'Rojo',    't.rojo@nbsc.edu.ph',       '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'Business',       'inactive'),
+('2023-00121', 'Francis',     'Idul',    '20231685@nbsc.edu.ph',     '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'IT',             'active');
 
--- FEEDBACK (message stored AES-256 encrypted, SHA-256 hash for integrity)
+-- FEEDBACK
 CREATE TABLE feedback (
     feedback_id  INT PRIMARY KEY AUTO_INCREMENT,
     category     ENUM('general','academic','facilities','services','faculty','administration','suggestion','complaint','other') DEFAULT 'general',
@@ -43,7 +51,7 @@ INSERT INTO feedback (category, priority, message_enc, message_hash, status) VAL
 ('facilities',     'High',   AES_ENCRYPT('One of our professors consistently starts class 20-30 minutes late without covering required topics.', 'nbsc_secret_key_2024'), SHA2('One of our professors consistently starts class 20-30 minutes late without covering required topics.', 256), 'pending'),
 ('administration', 'Medium', AES_ENCRYPT('The registration portal was extremely slow and kept timing out during enrollment.', 'nbsc_secret_key_2024'), SHA2('The registration portal was extremely slow and kept timing out during enrollment.', 256), 'resolved');
 
--- REVIEW REQUESTS (manager must state purpose before seeing encrypted feedback)
+-- REVIEW REQUESTS
 CREATE TABLE review_requests (
     request_id   INT PRIMARY KEY AUTO_INCREMENT,
     feedback_id  INT  NOT NULL,
@@ -59,7 +67,7 @@ CREATE TABLE review_requests (
     FOREIGN KEY (reviewed_by)  REFERENCES users(user_id)
 );
 
--- FEEDBACK REVIEWS (logged when manager reads approved feedback)
+-- FEEDBACK REVIEWS
 CREATE TABLE feedback_reviews (
     review_id      INT PRIMARY KEY AUTO_INCREMENT,
     feedback_id    INT  NOT NULL,
@@ -73,8 +81,16 @@ CREATE TABLE feedback_reviews (
     FOREIGN KEY (request_id)  REFERENCES review_requests(request_id)
 );
 
-
-
+-- ACTIVITY LOGS
+CREATE TABLE activity_logs (
+    log_id     INT PRIMARY KEY AUTO_INCREMENT,
+    user_id    INT  NULL,
+    action     VARCHAR(100) NOT NULL,
+    description TEXT,
+    ip_address VARCHAR(45),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
+);
 
 INSERT INTO activity_logs (user_id, action, description, ip_address) VALUES
 (1, 'LOGIN',          'Admin logged into the system',                     '127.0.0.1'),

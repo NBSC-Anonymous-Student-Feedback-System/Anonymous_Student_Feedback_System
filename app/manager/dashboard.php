@@ -6,7 +6,7 @@ require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
 require_once __DIR__ . '/../../includes/footer.php';
 
-requireRole('manager');
+requireRole('staff');
 
 $totalFeedback = $pdo->query("SELECT COUNT(*) FROM feedback")->fetchColumn();
 $urgentCount   = $pdo->query("SELECT COUNT(*) FROM feedback WHERE priority='Urgent'")->fetchColumn();

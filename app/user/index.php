@@ -210,7 +210,7 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
           <div class="sidebar-user-role"><?= sanitize($_SESSION['department']) ?></div>
         </div>
       </div>
-      <a href="<?= BASE_URL ?>/app/auth/student-logout.php" class="sidebar-logout">Logout</a>
+      <a href="<?= BASE_URL ?>/app/auth/logout.php" class="sidebar-logout">Logout</a>
     </div>
   </aside>
 

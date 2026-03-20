@@ -278,29 +278,26 @@ $categories = ['general','academic','facilities','services','faculty','administr
   </div>
 
   <!-- Filter -->
-  <form method="GET">
-    <div class="filter-bar">
-      <label>Filter by:</label>
-      <select name="priority" class="filter-select">
-        <option value="">All Priorities</option>
-        <?php foreach (['Low','Medium','High','Urgent'] as $p): ?>
-          <option value="<?= $p ?>" <?= $fp===$p?'selected':''?>><?= $p ?></option>
-        <?php endforeach; ?>
-      </select>
-      <select name="category" class="filter-select">
-        <option value="">All Categories</option>
-        <?php foreach ($categories as $cat): ?>
-          <option value="<?= $cat ?>" <?= $fc===$cat?'selected':''?>><?= categoryLabel($cat) ?></option>
-        <?php endforeach; ?>
-      </select>
-      <button type="submit" class="btn-filter">Filter</button>
-      <a href="<?= BASE_URL ?>/app/admin/feedback.php" class="btn-reset">Reset</a>
-    </div>
-  </form>
+  <div class="filter-bar">
+    <label>Filter by:</label>
+    <select class="filter-select" id="filterPriority" onchange="applyFilter()">
+      <option value="">All Priorities</option>
+      <?php foreach (['Low','Medium','High','Urgent'] as $p): ?>
+        <option value="<?= $p ?>"><?= $p ?></option>
+      <?php endforeach; ?>
+    </select>
+    <select class="filter-select" id="filterCategory" onchange="applyFilter()">
+      <option value="">All Categories</option>
+      <?php foreach ($categories as $cat): ?>
+        <option value="<?= $cat ?>"><?= categoryLabel($cat) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <span id="resultCount" style="font-size:12px;color:#6b7280;"></span>
+  </div>
 
   <div class="table-card">
     <div class="table-card-header">
-      <span class="table-card-title">All Feedback</span>
+     <span class="table-card-title" id="tableTitle">All Feedback</span>
       <span style="font-size:12px;color:#6b7280;"><?= count($feedbacks) ?> entries</span>
     </div>
     <div style="overflow-x:auto;">
@@ -314,11 +311,11 @@ $categories = ['general','academic','facilities','services','faculty','administr
             <th>Content</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="feedbackBody">
           <?php if (empty($feedbacks)): ?>
             <tr class="empty-row"><td colspan="5">No feedback found.</td></tr>
           <?php else: foreach ($feedbacks as $fb): ?>
-          <tr>
+             <tr data-priority="<?= $fb['priority'] ?>" data-category="<?= $fb['category'] ?>">
             <td class="id-cell"><?= $fb['feedback_id'] ?></td>
             <td><?= categoryIcon($fb['category']) ?> <?= sanitize(categoryLabel($fb['category'])) ?></td>
             <td><?= priorityBadge($fb['priority']) ?></td>
@@ -326,7 +323,7 @@ $categories = ['general','academic','facilities','services','faculty','administr
             <td><span class="enc-tag">🔒 Encrypted</span></td>
           </tr>
           <?php endforeach; endif; ?>
-        </tbody>
+     <tbody id="feedbackBody">
       </table>
     </div>
   </div>
@@ -343,6 +340,44 @@ $categories = ['general','academic','facilities','services','faculty','administr
       menu.classList.remove('open');
     }
   });
+
+  function applyFilter() {
+    const priority = document.getElementById('filterPriority').value;
+    const category = document.getElementById('filterCategory').value;
+    const rows     = document.querySelectorAll('#feedbackBody tr[data-priority]');
+
+    let visible = 0;
+    rows.forEach(row => {
+      const matchPri = !priority || row.dataset.priority === priority;
+      const matchCat = !category || row.dataset.category === category;
+      const show     = matchPri && matchCat;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+
+    // Update title
+    let title = 'All Feedback';
+    if (priority && category)   title = priority + ' · ' + category.charAt(0).toUpperCase() + category.slice(1);
+    else if (priority)           title = priority + ' Priority Feedback';
+    else if (category)           title = category.charAt(0).toUpperCase() + category.slice(1) + ' Feedback';
+    document.getElementById('tableTitle').textContent  = title;
+    document.getElementById('resultCount').textContent = visible + ' result' + (visible !== 1 ? 's' : '');
+
+    // Empty state
+    let emptyRow = document.getElementById('emptyFilterRow');
+    if (visible === 0) {
+      if (!emptyRow) {
+        emptyRow = document.createElement('tr');
+        emptyRow.id        = 'emptyFilterRow';
+        emptyRow.className = 'empty-row';
+        emptyRow.innerHTML = '<td colspan="5">No feedback matches this filter.</td>';
+        document.getElementById('feedbackBody').appendChild(emptyRow);
+      }
+      emptyRow.style.display = '';
+    } else if (emptyRow) {
+      emptyRow.style.display = 'none';
+    }
+  }
 </script>
 </body>
 </html>

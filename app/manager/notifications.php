@@ -5,10 +5,10 @@ require_once __DIR__ . '/../../config/function.php';
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
 require_once __DIR__ . '/../../includes/footer.php';
-requireRole('manager');
+requireRole('staff');
 if (isset($_POST['mark_all_read'])) { $pdo->prepare("UPDATE notifications SET is_read=1 WHERE user_id=?")->execute([$_SESSION['user_id']]); }
 $notifs=$pdo->prepare("SELECT * FROM notifications WHERE user_id=? ORDER BY created_at DESC"); $notifs->execute([$_SESSION['user_id']]); $notifs=$notifs->fetchAll();
-renderHeader('Notifications'); renderSidebar('manager','Notifications');
+renderHeader('Notifications'); renderSidebar('staff','Notifications');
 ?>
 <div class="topbar"><span class="topbar-title">Notifications</span><div class="topbar-actions"><form method="POST"><button type="submit" name="mark_all_read" class="btn btn-outline btn-sm">Mark All Read</button></form></div></div>
 <div class="content"><div class="page-header"><h1>Notifications</h1></div>

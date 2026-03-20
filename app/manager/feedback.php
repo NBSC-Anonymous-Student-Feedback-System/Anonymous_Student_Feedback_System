@@ -6,7 +6,7 @@ require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
 require_once __DIR__ . '/../../includes/footer.php';
 
-requireRole('manager');
+requireRole('staff');
 $msg = ''; $err = '';
 
 // ── Submit a review request (state purpose) ───────────────────────
@@ -69,7 +69,7 @@ foreach ($rq->fetchAll() as $r) {
 $offHours = !isWithinOfficeHours();
 
 renderHeader('Feedback — Manager');
-renderSidebar('manager', 'All Feedback');
+renderSidebar('staff', 'All Feedback');
 ?>
 <div class="topbar"><span class="topbar-title">All Feedback</span></div>
 <div class="content">

@@ -1,26 +1,31 @@
 <?php
 function renderSidebar($role, $active = '') {
-    $base = BASE_URL;
-    $user = currentUser();
-    $initial  = strtoupper(substr($user['first_name'] ?? 'U', 0, 1));
-    $fullname = ($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '');
+    $base     = BASE_URL;
+    $initial  = strtoupper(substr($_SESSION['first_name'] ?? 'U', 0, 1));
+    $fullname = sanitize(($_SESSION['first_name'] ?? '') . ' ' . ($_SESSION['last_name'] ?? ''));
+    $roleLabel = match($role) {
+        'staff' => 'Manager',
+        'admin' => 'Admin',
+        default => ucfirst($role),
+    };
 
     $nav = '';
 
     if ($role === 'admin') {
-        $nav .= navItem("$base/app/admin/dashboard.php",    svgIcon('grid'),           'Dashboard',     $active);
+        $nav .= navItem("$base/app/admin/dashboard.php",      svgIcon('grid'),           'Dashboard',      $active);
         $nav .= '<span class="nav-section-label">Management</span>';
-        $nav .= navItem("$base/app/admin/feedback.php",     svgIcon('message-square'), 'Feedback',      $active);
-        $nav .= navItem("$base/app/admin/users.php",        svgIcon('users'),          'Users',         $active);
+        $nav .= navItem("$base/app/admin/feedback.php",       svgIcon('message-square'), 'Feedback',       $active);
+        $nav .= navItem("$base/app/admin/users.php",          svgIcon('users'),          'Users',          $active);
         $nav .= navItem("$base/app/admin/review-requests.php",svgIcon('shield'),         'Review Requests',$active);
         $nav .= '<span class="nav-section-label">Reports</span>';
-        $nav .= navItem("$base/app/admin/activity-logs.php",svgIcon('file-text'),      'Activity Logs', $active);
-        $nav .= navItem("$base/app/admin/notifications.php",svgIcon('bell'),           'Notifications', $active);
-    } elseif ($role === 'manager') {
-        $nav .= navItem("$base/app/manager/dashboard.php",    svgIcon('grid'),           'Dashboard',    $active);
+        $nav .= navItem("$base/app/admin/activity-logs.php",  svgIcon('file-text'),      'Activity Logs',  $active);
+        $nav .= navItem("$base/app/admin/notifications.php",  svgIcon('bell'),           'Notifications',  $active);
+
+    } elseif ($role === 'staff') {
+        $nav .= navItem("$base/app/manager/dashboard.php",    svgIcon('grid'),           'Dashboard',      $active);
         $nav .= '<span class="nav-section-label">Feedback</span>';
-        $nav .= navItem("$base/app/manager/feedback.php",     svgIcon('message-square'), 'All Feedback', $active);
-        $nav .= navItem("$base/app/manager/notifications.php",svgIcon('bell'),           'Notifications',$active);
+        $nav .= navItem("$base/app/manager/feedback.php",     svgIcon('message-square'), 'All Feedback',   $active);
+        $nav .= navItem("$base/app/manager/notifications.php",svgIcon('bell'),           'Notifications',  $active);
     }
 
     echo '
@@ -35,8 +40,8 @@ function renderSidebar($role, $active = '') {
           <div class="sidebar-user">
             <div class="sidebar-avatar">' . $initial . '</div>
             <div class="sidebar-user-info">
-              <div class="name">' . sanitize($fullname) . '</div>
-              <div class="role">' . ucfirst($role) . '</div>
+              <div class="name">' . $fullname . '</div>
+              <div class="role">' . $roleLabel . '</div>
             </div>
           </div>
           <a href="' . $base . '/app/auth/logout.php" class="btn btn-outline" style="width:100%;justify-content:center;">

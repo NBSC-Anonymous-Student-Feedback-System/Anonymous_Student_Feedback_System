@@ -15,11 +15,13 @@ function isLoggedIn() {
 
 function requireRole($role) {
     if (!isset($_SESSION['role']) || $_SESSION['role'] !== $role) {
-        if ($role === 'student') {
-            redirect(BASE_URL . '/app/auth/student-login.php');
-        } else {
-            redirect(BASE_URL . '/app/auth/admin-login.php');
-        }
+        redirect(BASE_URL . '/app/auth/login.php');
+    }
+}
+
+function requireAnyRole(array $roles) {
+    if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], $roles)) {
+        redirect(BASE_URL . '/app/auth/login.php');
     }
 }
 
@@ -64,8 +66,8 @@ function verifyIntegrity($plaintext, $storedHash) {
     return hash('sha256', $plaintext) === $storedHash;
 }
 
-// ─── Time Constraint (off-hours check) ───────────────────────────
-// Allowed: Monday–Friday, 8:00 AM – 5:00 PM (Philippine Time)
+// ─── Time Constraint (off-hours check) ────────────────────────────
+// Allowed: every day, 8:00 AM – 5:00 PM (Philippine Time)
 function isWithinOfficeHours() {
     $tz   = new DateTimeZone('Asia/Manila');
     $now  = new DateTime('now', $tz);
@@ -114,9 +116,10 @@ function priorityBadge($p) {
 }
 
 function roleBadge($r) {
-    $map = ['admin'=>'badge-admin','manager'=>'badge-staff','student'=>'badge-student'];
+    $map = ['admin'=>'badge-admin','staff'=>'badge-staff','student'=>'badge-student'];
     return "<span class='badge ".($map[$r]??'badge-student')."'>".ucfirst($r)."</span>";
 }
+
 function requestStatusBadge($s) {
     $map = ['pending'=>'badge-pending','approved'=>'badge-resolved','rejected'=>'badge-urgent'];
     return "<span class='badge ".($map[$s]??'badge-pending')."'>".ucfirst($s)."</span>";
@@ -126,10 +129,18 @@ function requestStatusBadge($s) {
 function categoryLabel($c) {
     return ucfirst(str_replace('_', ' ', $c));
 }
+
 function categoryIcon($cat) {
     $icons = [
-        'academic'=>'📚','facilities'=>'🏫','services'=>'🛎️','faculty'=>'👨‍🏫',
-        'administration'=>'🏛️','suggestion'=>'💡','complaint'=>'⚠️','general'=>'💬','other'=>'📝',
+        'academic'       => '📚',
+        'facilities'     => '🏫',
+        'services'       => '🛎️',
+        'faculty'        => '👨‍🏫',
+        'administration' => '🏛️',
+        'suggestion'     => '💡',
+        'complaint'      => '⚠️',
+        'general'        => '💬',
+        'other'          => '📝',
     ];
     return $icons[$cat] ?? '💬';
 }

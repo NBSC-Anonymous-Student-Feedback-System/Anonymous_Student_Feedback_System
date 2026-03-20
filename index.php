@@ -11,4 +11,4 @@ if (isset($_SESSION['role'])) {
 }
 
 // Not logged in — send to student login by default
-redirect(BASE_URL . '/app/auth/student-login.php');
+redirect(BASE_URL . '/app/auth/login.php');

@@ -39,7 +39,7 @@ function renderSidebar($role, $active = '') {
               <div class="role">' . ucfirst($role) . '</div>
             </div>
           </div>
-          <a href="' . $base . '/app/auth/admin-logout.php" class="btn btn-outline" style="width:100%;justify-content:center;">
+          <a href="' . $base . '/app/auth/logout.php" class="btn btn-outline" style="width:100%;justify-content:center;">
             ' . svgIcon('log-out') . ' Logout
           </a>
         </div>

@@ -197,6 +197,11 @@ $unreadNotif = getUnreadNotifCount($pdo, $_SESSION['user_id']);
 <!-- ── Navbar ── -->
 <nav class="mgr-navbar">
   <div class="navbar-left">
+    <img 
+  src="<?= BASE_URL ?>/media/logoweb.svg" 
+  alt="NBSC Logo"
+  style="width:36px;height:36px;object-fit:contain;flex-shrink:0;border-radius:8px;"
+>
     <div>
       <div class="brand-name">NBSC Feedback</div>
       <div class="brand-sub">Anonymous Feedback System</div>

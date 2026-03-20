@@ -266,6 +266,25 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
       .chart-cols { grid-template-columns: 1fr; }
       .user-chip .user-name { display: none; }
     }
+
+    .pagination-wrap {
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 10px;
+  padding: 16px 20px 20px; margin-top: 12px;
+}
+.pagination-info { font-size: 12px; color: #6b7280; }
+.pagination-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.page-btn {
+  min-width: 34px; height: 34px; border-radius: 8px;
+  border: 1.5px solid #e5e7eb; background: #fff;
+  font-size: 13px; font-weight: 600; color: #374151;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; padding: 0 8px;
+}
+.page-btn:hover    { border-color: #1e40af; color: #1e40af; background: #eff6ff; }
+.page-btn.active   { background: linear-gradient(135deg, #1e40af, #0ea5e9); color: #fff; border-color: transparent; }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -439,6 +458,7 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
   </div>
 
   <!-- SECTION: My Submissions -->
+   <div id="submissionsList">
   <div class="page-section" id="section-submissions">
     <div class="page-header">
       <h1>My Submissions</h1>
@@ -501,6 +521,12 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
         <?php endif; ?>
       </div>
     <?php endforeach; endif; ?>
+
+     <!-- Pagination -->
+    <div class="pagination-wrap" id="paginationWrap" style="display:none;">
+      <span class="pagination-info" id="paginationInfo"></span>
+      <div class="pagination-btns" id="pageButtons"></div>
+    </div>
   </div>
 
 </div>
@@ -606,6 +632,88 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
   function updateEditCount(id) {
     document.getElementById('edit-count-' + id).textContent = document.getElementById('edit-msg-' + id).value.length;
   }
+
+  // ── Submissions Pagination ──
+  const CARDS_PER_PAGE = 5;
+  let subCurrentPage   = 1;
+
+  function initSubmissionPagination() {
+    subCurrentPage = 1;
+    renderSubPage();
+  }
+
+  function renderSubPage() {
+    const cards = Array.from(document.querySelectorAll('.fb-card'));
+    if (cards.length === 0) return;
+
+    cards.forEach(c => c.style.display = 'none');
+
+    const start     = (subCurrentPage - 1) * CARDS_PER_PAGE;
+    const end       = start + CARDS_PER_PAGE;
+    cards.slice(start, end).forEach(c => c.style.display = '');
+
+    renderSubPagination(cards.length);
+  }
+
+  function renderSubPagination(total) {
+    const totalPages = Math.ceil(total / CARDS_PER_PAGE);
+    const wrap       = document.getElementById('paginationWrap');
+    const btns       = document.getElementById('pageButtons');
+
+    if (totalPages <= 1) { wrap.style.display = 'none'; return; }
+
+    wrap.style.display = 'flex';
+    btns.innerHTML     = '';
+
+    // Prev
+    const prev       = document.createElement('button');
+    prev.className   = 'page-btn';
+    prev.textContent = '←';
+    prev.disabled    = subCurrentPage === 1;
+    prev.onclick     = () => { subCurrentPage--; renderSubPage(); };
+    btns.appendChild(prev);
+
+    // Page numbers with ellipsis
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= subCurrentPage - 1 && i <= subCurrentPage + 1)) {
+        const btn       = document.createElement('button');
+        btn.className   = 'page-btn' + (i === subCurrentPage ? ' active' : '');
+        btn.textContent = i;
+        btn.onclick     = (function(page) {
+          return function() { subCurrentPage = page; renderSubPage(); };
+        })(i);
+        btns.appendChild(btn);
+      } else if (i === subCurrentPage - 2 || i === subCurrentPage + 2) {
+        const dots           = document.createElement('span');
+        dots.textContent     = '…';
+        dots.style.cssText   = 'color:#9ca3af;font-size:13px;padding:0 4px;';
+        btns.appendChild(dots);
+      }
+    }
+
+    // Next
+    const next       = document.createElement('button');
+    next.className   = 'page-btn';
+    next.textContent = '→';
+    next.disabled    = subCurrentPage === totalPages;
+    next.onclick     = () => { subCurrentPage++; renderSubPage(); };
+    btns.appendChild(next);
+
+    document.getElementById('paginationInfo').textContent =
+      'Page ' + subCurrentPage + ' of ' + totalPages;
+  }
+
+  // Hook into existing showSection
+  const _origShowSection = showSection;
+  showSection = function(name) {
+    _origShowSection(name);
+    if (name === 'submissions') initSubmissionPagination();
+  };
+
+  // Init if auto-redirected to submissions
+  <?php if (isset($_GET['updated']) || isset($_GET['deleted'])): ?>
+    initSubmissionPagination();
+  <?php endif; ?>
 </script>
 </body>
 </html>

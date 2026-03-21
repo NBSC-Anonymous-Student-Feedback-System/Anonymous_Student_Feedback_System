@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_feedback'])) {
     $check = $pdo->prepare("SELECT * FROM feedback WHERE feedback_id = ? AND submitted_by = ?");
     $check->execute([$feedback_id, $_SESSION['user_id']]);
     $existing = $check->fetch();
-    if ($existing && strlen($message) >= 10 && strlen($message) <= 200) {
+    if ($existing && strlen($message) >= 10 && strlen($message) <= 1000) {
         $encMessage  = encryptMessage($message);
         $hashMessage = hashMessage($message);
         $pdo->prepare("UPDATE feedback SET message_enc = ?, message_hash = ? WHERE feedback_id = ? AND submitted_by = ?")
@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_feedback'])) {
         header("Location: " . BASE_URL . "/app/user/index.php?updated=1");
         exit;
     } else {
-        $err = 'Update failed. Message must be 10–200 characters.';
+        $err = 'Update failed. Message must be 10–1000 characters.';
     }
 }
 
@@ -495,10 +495,11 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
           <form method="POST" id="edit-form-<?= $fb['feedback_id'] ?>" style="display:none;">
             <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
             <textarea name="updated_message" id="edit-msg-<?= $fb['feedback_id'] ?>"
-              class="msg-area" maxlength="200" minlength="10" required
+              class="msg-area" maxlength="1000" minlength="10" required
               oninput="updateEditCount(<?= $fb['feedback_id'] ?>)"
               style="margin-bottom:4px;"><?= sanitize($plain) ?></textarea>
-            <div class="char-count"><span id="edit-count-<?= $fb['feedback_id'] ?>"><?= strlen($plain) ?></span>/200</div>
+            <div class="char-count"><span id="edit-count-<?= $fb['feedback_id'] ?>"><?= strlen($plain) ?></span>/1000
+          </div>
           </form>
           <div class="fb-footer">
             <span><?= timeAgo($fb['submitted_at']) ?></span>
@@ -610,7 +611,7 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
 
   function confirmUpdate(id) {
     const msg = document.getElementById('edit-msg-' + id).value.trim();
-    if (msg.length < 10 || msg.length > 200) { alert('Message must be 10–200 characters.'); return; }
+    if (msg.length < 10 || msg.length > 1000) { alert('Message must be 10–1000 characters.'); return; }
     if (confirm('Are you sure you want to update this feedback?')) {
       const form  = document.getElementById('edit-form-' + id);
       const input = document.createElement('input');

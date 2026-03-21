@@ -332,6 +332,27 @@ $allFeedback = $allFeedback->fetchAll();
   transition: opacity 0.15s;
 }
 .btn-modal-submit:hover { opacity: 0.88; }
+
+/* Pagination */
+.pagination-wrap {
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 10px;
+  padding: 16px 20px 20px; border-top: 1px solid #f3f4f6;
+}
+.pagination-info { font-size: 12px; color: #6b7280; }
+.pagination-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.page-btn {
+  min-width: 34px; height: 34px; border-radius: 8px;
+  border: 1.5px solid #e5e7eb; background: #fff;
+  font-size: 13px; font-weight: 600; color: #374151;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; padding: 0 8px;
+}
+.page-btn:hover    { border-color: #1e40af; color: #1e40af; background: #eff6ff; }
+.page-btn.active   { background: linear-gradient(135deg, #1e40af, #0ea5e9); color: #fff; border-color: transparent; }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
   </style>
 </head>
 <body>
@@ -513,6 +534,13 @@ $allFeedback = $allFeedback->fetchAll();
         </tbody>
       </table>
     </div>
+
+     <!-- Pagination -->
+    <div class="pagination-wrap" id="paginationWrap" style="display:none;">
+      <span class="pagination-info" id="paginationInfo"></span>
+      <div class="pagination-btns" id="pageButtons"></div>
+    </div>
+
   </div>
 </div>
 
@@ -564,11 +592,13 @@ $allFeedback = $allFeedback->fetchAll();
     }
   });
 
-  // ── Filter logic: only one dropdown active at a time ──
-  let activeFilter = 'time'; // default
+ // ── Filter logic: only one dropdown active at a time ──
+  let activeFilter  = 'time';
+  let filteredRows  = [];
+  let currentPage   = 1;
+  const ROWS_PER_PAGE = 10;
 
   function applyFilter(changedBy) {
-    // Reset the other two dropdowns when one changes
     if (changedBy === 'time') {
       document.getElementById('filterCategory').value = '';
       document.getElementById('filterPriority').value = '';
@@ -582,6 +612,7 @@ $allFeedback = $allFeedback->fetchAll();
       document.getElementById('filterCategory').value = '';
       activeFilter = 'priority';
     }
+    currentPage = 1;
     renderTable();
   }
 
@@ -589,91 +620,144 @@ $allFeedback = $allFeedback->fetchAll();
     const timeVal     = document.getElementById('filterTime').value;
     const categoryVal = document.getElementById('filterCategory').value;
     const priorityVal = document.getElementById('filterPriority').value;
+    const allRows     = Array.from(document.querySelectorAll('#feedbackBody tr[data-time]'));
+    const now         = Math.floor(Date.now() / 1000);
+    const weekAgo     = now - (7 * 24 * 60 * 60);
 
-    const rows   = document.querySelectorAll('#feedbackBody tr[data-time]');
-    const now    = Math.floor(Date.now() / 1000);
-    const dayAgo = now - (24 * 60 * 60); // last 24 hours = "recent"
-
-    let visible = 0;
-
-    rows.forEach(row => {
-      const cat      = row.dataset.category;
-      const pri      = row.dataset.priority;
-      const rowTime  = parseInt(row.dataset.time);
-      let   show     = true;
+    // Filter
+    filteredRows = allRows.filter(row => {
+      const cat     = row.dataset.category;
+      const pri     = row.dataset.priority;
+      const rowTime = parseInt(row.dataset.time);
 
       if (activeFilter === 'time') {
-        if (timeVal === 'recent') show = rowTime >= dayAgo;
-        if (timeVal === 'older')  show = rowTime < dayAgo;
+        return timeVal === 'recent' ? rowTime >= weekAgo : rowTime < weekAgo;
       } else if (activeFilter === 'category') {
-        if (categoryVal) show = (cat === categoryVal);
+        return !categoryVal || cat === categoryVal;
       } else if (activeFilter === 'priority') {
-        if (priorityVal) show = (pri === priorityVal);
+        return !priorityVal || pri === priorityVal;
       }
-
-     row.style.display = show ? '' : 'none';
-      if (show) visible++;
+      return true;
     });
 
-    // ── Sort rows based on filter ──
-    const tbody   = document.getElementById('feedbackBody');
-    const visRows = Array.from(rows).filter(r => r.dataset.time && r.style.display !== 'none');
-
-    visRows.sort((a, b) => {
-      const timeA = parseInt(a.dataset.time);
-      const timeB = parseInt(b.dataset.time);
-      if (activeFilter === 'time' && timeVal === 'older') {
-        return timeA - timeB; // oldest first (ASC) for Previous Feedback
-      }
-      return timeB - timeA; // newest first (DESC) for everything else
+    // Sort
+    filteredRows.sort((a, b) => {
+      const tA = parseInt(a.dataset.time);
+      const tB = parseInt(b.dataset.time);
+      return (activeFilter === 'time' && timeVal === 'older')
+        ? tA - tB
+        : tB - tA;
     });
 
-    visRows.forEach(row => tbody.appendChild(row));
-
-    // Update title and count
-    
-
-
-    // Update title and count
+    // Update title
     const titles = {
-      time: timeVal === 'recent' ? 'Recent Feedback' : 'Previous Feedback',
+      time:     timeVal === 'recent' ? 'Recent Feedback' : 'Previous Feedback',
       category: categoryVal ? categoryVal.charAt(0).toUpperCase() + categoryVal.slice(1) + ' Feedback' : 'All Feedback',
       priority: priorityVal ? priorityVal + ' Priority Feedback' : 'All Feedback',
     };
-    document.getElementById('tableTitle').textContent  = titles[activeFilter];
-    document.getElementById('resultCount').textContent = visible + ' result' + (visible !== 1 ? 's' : '');
+    document.getElementById('tableTitle').textContent = titles[activeFilter];
 
-    // Show empty state if none visible
-    let emptyRow = document.getElementById('emptyRow');
-    if (visible === 0) {
+    renderPage();
+  }
+
+  function renderPage() {
+    const allRows = Array.from(document.querySelectorAll('#feedbackBody tr[data-time]'));
+    allRows.forEach(r => r.style.display = 'none');
+
+    // Remove old empty state
+    const oldEmpty = document.getElementById('emptyRow');
+    if (oldEmpty) oldEmpty.style.display = 'none';
+
+    if (filteredRows.length === 0) {
+      let emptyRow = document.getElementById('emptyRow');
       if (!emptyRow) {
         emptyRow = document.createElement('tr');
-        emptyRow.id = 'emptyRow';
+        emptyRow.id        = 'emptyRow';
         emptyRow.className = 'empty-row';
         emptyRow.innerHTML = '<td colspan="7">No feedback matches this filter.</td>';
         document.getElementById('feedbackBody').appendChild(emptyRow);
       }
       emptyRow.style.display = '';
-    } else if (emptyRow) {
-      emptyRow.style.display = 'none';
+      document.getElementById('paginationWrap').style.display = 'none';
+      document.getElementById('resultCount').textContent = '0 results';
+      return;
     }
+
+    // Re-order DOM
+    const tbody = document.getElementById('feedbackBody');
+    filteredRows.forEach(r => tbody.appendChild(r));
+
+    // Slice for page
+    const start    = (currentPage - 1) * ROWS_PER_PAGE;
+    const end      = start + ROWS_PER_PAGE;
+    filteredRows.slice(start, end).forEach(r => r.style.display = '');
+
+    document.getElementById('resultCount').textContent =
+      'Showing ' + (start + 1) + '–' + Math.min(end, filteredRows.length) + ' of ' + filteredRows.length + ' results';
+
+    renderPagination();
   }
 
-  // Run on load to apply default "recent" filter
+  function renderPagination() {
+    const totalPages = Math.ceil(filteredRows.length / ROWS_PER_PAGE);
+    const wrap       = document.getElementById('paginationWrap');
+    const btns       = document.getElementById('pageButtons');
+
+    if (totalPages <= 1) { wrap.style.display = 'none'; return; }
+
+    wrap.style.display = 'flex';
+    btns.innerHTML     = '';
+
+    const prev       = document.createElement('button');
+    prev.className   = 'page-btn';
+    prev.textContent = '←';
+    prev.disabled    = currentPage === 1;
+    prev.onclick     = () => { currentPage--; renderPage(); };
+    btns.appendChild(prev);
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+        const btn       = document.createElement('button');
+        btn.className   = 'page-btn' + (i === currentPage ? ' active' : '');
+        btn.textContent = i;
+        btn.onclick     = (function(page) {
+          return function() { currentPage = page; renderPage(); };
+        })(i);
+        btns.appendChild(btn);
+      } else if (i === currentPage - 2 || i === currentPage + 2) {
+        const dots         = document.createElement('span');
+        dots.textContent   = '…';
+        dots.style.cssText = 'color:#9ca3af;font-size:13px;padding:0 4px;';
+        btns.appendChild(dots);
+      }
+    }
+
+    const next       = document.createElement('button');
+    next.className   = 'page-btn';
+    next.textContent = '→';
+    next.disabled    = currentPage === totalPages;
+    next.onclick     = () => { currentPage++; renderPage(); };
+    btns.appendChild(next);
+
+    document.getElementById('paginationInfo').textContent =
+      'Page ' + currentPage + ' of ' + totalPages;
+  }
+
+  // Init on load
   renderTable();
 
   function openRequestModal(fid, category, priority) {
-  document.getElementById('requestModal').classList.add('open');
-  document.getElementById('modalFid').value   = fid;
-  document.getElementById('modalFbInfo').textContent = 'Feedback #' + fid + ' · ' + category + ' · Priority: ' + priority;
-}
-function closeRequestModal() {
-  document.getElementById('requestModal').classList.remove('open');
-}
-// Close modal on overlay click
-document.getElementById('requestModal').addEventListener('click', function(e) {
-  if (e.target === this) closeRequestModal();
-});
+    document.getElementById('requestModal').classList.add('open');
+    document.getElementById('modalFid').value = fid;
+    document.getElementById('modalFbInfo').textContent = 'Feedback #' + fid + ' · ' + category + ' · Priority: ' + priority;
+  }
+  function closeRequestModal() {
+    document.getElementById('requestModal').classList.remove('open');
+  }
+  document.getElementById('requestModal').addEventListener('click', function(e) {
+    if (e.target === this) closeRequestModal();
+  });
+  
 </script>
 </body>
 </html>

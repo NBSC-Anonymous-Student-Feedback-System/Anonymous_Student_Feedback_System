@@ -12,7 +12,7 @@ $logs = $pdo->query("
     FROM activity_logs a
     JOIN users u ON a.user_id = u.user_id
     ORDER BY a.created_at DESC
-    LIMIT 200
+    
 ")->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -153,6 +153,28 @@ $logs = $pdo->query("
     @media (max-width: 640px) {
       .user-chip .user-name { display: none; }
     }
+
+    /* Pagination */
+.pagination-wrap {
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 10px;
+  padding: 16px 20px 20px; border-top: 1px solid #f3f4f6;
+}
+.pagination-info { font-size: 12px; color: #6b7280; }
+.pagination-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+
+.page-btn {
+  min-width: 34px; height: 34px; border-radius: 8px;
+  border: 1.5px solid #e5e7eb; background: #fff;
+  font-size: 13px; font-weight: 600; color: #374151;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; padding: 0 8px;
+}
+.page-btn:hover   { border-color: #1e40af; color: #1e40af; background: #eff6ff; }
+.page-btn.active  { background: linear-gradient(135deg, #1e40af, #0ea5e9); color: #fff; border-color: transparent; }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
   </style>
 </head>
 <body>
@@ -266,6 +288,13 @@ $logs = $pdo->query("
         </tbody>
       </table>
     </div>
+
+     <!-- Pagination -->
+    <div class="pagination-wrap" id="paginationWrap" style="display:none;">
+      <span class="pagination-info" id="paginationInfo"></span>
+      <div class="pagination-btns" id="pageButtons"></div>
+    </div>
+
   </div>
 </div>
 
@@ -280,6 +309,76 @@ $logs = $pdo->query("
       menu.classList.remove('open');
     }
   });
+
+  // ── Activity Logs Pagination ──
+  const ROWS_PER_PAGE = 10;
+  let currentPage     = 1;
+
+  function initPagination() {
+    currentPage = 1;
+    renderPage();
+  }
+
+  function renderPage() {
+    const rows = Array.from(document.querySelectorAll('tbody tr:not(.empty-row)'));
+    if (rows.length === 0) return;
+
+    rows.forEach(r => r.style.display = 'none');
+
+    const start = (currentPage - 1) * ROWS_PER_PAGE;
+    const end   = start + ROWS_PER_PAGE;
+    rows.slice(start, end).forEach(r => r.style.display = '');
+
+    renderPagination(rows.length);
+  }
+
+  function renderPagination(total) {
+    const totalPages = Math.ceil(total / ROWS_PER_PAGE);
+    const wrap       = document.getElementById('paginationWrap');
+    const btns       = document.getElementById('pageButtons');
+
+    if (totalPages <= 1) { wrap.style.display = 'none'; return; }
+
+    wrap.style.display = 'flex';
+    btns.innerHTML     = '';
+
+    const prev       = document.createElement('button');
+    prev.className   = 'page-btn';
+    prev.textContent = '←';
+    prev.disabled    = currentPage === 1;
+    prev.onclick     = () => { currentPage--; renderPage(); };
+    btns.appendChild(prev);
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+        const btn       = document.createElement('button');
+        btn.className   = 'page-btn' + (i === currentPage ? ' active' : '');
+        btn.textContent = i;
+        btn.onclick     = (function(page) {
+          return function() { currentPage = page; renderPage(); };
+        })(i);
+        btns.appendChild(btn);
+      } else if (i === currentPage - 2 || i === currentPage + 2) {
+        const dots         = document.createElement('span');
+        dots.textContent   = '…';
+        dots.style.cssText = 'color:#9ca3af;font-size:13px;padding:0 4px;';
+        btns.appendChild(dots);
+      }
+    }
+
+    const next       = document.createElement('button');
+    next.className   = 'page-btn';
+    next.textContent = '→';
+    next.disabled    = currentPage === totalPages;
+    next.onclick     = () => { currentPage++; renderPage(); };
+    btns.appendChild(next);
+
+    document.getElementById('paginationInfo').textContent =
+      'Page ' + currentPage + ' of ' + totalPages;
+  }
+
+  // Init on load
+  initPagination();
 </script>
 </body>
 </html>

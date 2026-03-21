@@ -253,6 +253,28 @@ $users = $pdo->query("SELECT * FROM users ORDER BY role, last_name")->fetchAll()
       .user-chip .user-name { display: none; }
       .form-grid { grid-template-columns: 1fr; }
     }
+
+    /* Pagination */
+.pagination-wrap {
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 10px;
+  padding: 16px 20px 20px; border-top: 1px solid #f3f4f6;
+}
+.pagination-info { font-size: 12px; color: #6b7280; }
+.pagination-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+
+.page-btn {
+  min-width: 34px; height: 34px; border-radius: 8px;
+  border: 1.5px solid #e5e7eb; background: #fff;
+  font-size: 13px; font-weight: 600; color: #374151;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; padding: 0 8px;
+}
+.page-btn:hover   { border-color: #1e40af; color: #1e40af; background: #eff6ff; }
+.page-btn.active  { background: linear-gradient(135deg, #1e40af, #0ea5e9); color: #fff; border-color: transparent; }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
   </style>
 </head>
 <body>
@@ -368,8 +390,8 @@ $users = $pdo->query("SELECT * FROM users ORDER BY role, last_name")->fetchAll()
             <td><?= roleBadge($u['role']) ?></td>
             <td class="dept-cell"><?= sanitize($u['department']) ?></td>
             <td class="date-cell"><?= date('M d, Y', strtotime($u['created_at'])) ?></td>
-            <td>
-              <?php if ($u['user_id'] !== $_SESSION['user_id']): ?>
+           <td>
+              <?php if ($u['user_id'] !== $_SESSION['user_id'] && $u['role'] !== 'staff' && $u['role'] !== 'admin'): ?>
                 <form method="POST" style="display:inline;"
                   onsubmit="return confirm('Are you sure you want to delete this user?')">
                   <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
@@ -381,9 +403,17 @@ $users = $pdo->query("SELECT * FROM users ORDER BY role, last_name")->fetchAll()
             </td>
           </tr>
           <?php endforeach; ?>
+
+
         </tbody>
       </table>
     </div>
+             <!-- Pagination -->
+    <div class="pagination-wrap" id="paginationWrap" style="display:none;">
+      <span class="pagination-info" id="paginationInfo"></span>
+      <div class="pagination-btns" id="pageButtons"></div>
+    </div>
+
   </div>
 </div>
 
@@ -467,6 +497,77 @@ $users = $pdo->query("SELECT * FROM users ORDER BY role, last_name")->fetchAll()
       openCreateModal();
     <?php endif; ?>
   <?php endif; ?>
+
+  // ── Users Pagination ──
+  const ROWS_PER_PAGE = 10;
+  let currentPage     = 1;
+
+  function initPagination() {
+    currentPage = 1;
+    renderPage();
+  }
+
+  function renderPage() {
+    const rows = Array.from(document.querySelectorAll('tbody tr'));
+    if (rows.length === 0) return;
+
+    rows.forEach(r => r.style.display = 'none');
+
+    const start = (currentPage - 1) * ROWS_PER_PAGE;
+    const end   = start + ROWS_PER_PAGE;
+    rows.slice(start, end).forEach(r => r.style.display = '');
+
+    renderPagination(rows.length);
+  }
+
+  function renderPagination(total) {
+    const totalPages = Math.ceil(total / ROWS_PER_PAGE);
+    const wrap       = document.getElementById('paginationWrap');
+    const btns       = document.getElementById('pageButtons');
+
+    if (totalPages <= 1) { wrap.style.display = 'none'; return; }
+
+    wrap.style.display = 'flex';
+    btns.innerHTML     = '';
+
+    const prev       = document.createElement('button');
+    prev.className   = 'page-btn';
+    prev.textContent = '←';
+    prev.disabled    = currentPage === 1;
+    prev.onclick     = () => { currentPage--; renderPage(); };
+    btns.appendChild(prev);
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+        const btn       = document.createElement('button');
+        btn.className   = 'page-btn' + (i === currentPage ? ' active' : '');
+        btn.textContent = i;
+        btn.onclick     = (function(page) {
+          return function() { currentPage = page; renderPage(); };
+        })(i);
+        btns.appendChild(btn);
+      } else if (i === currentPage - 2 || i === currentPage + 2) {
+        const dots         = document.createElement('span');
+        dots.textContent   = '…';
+        dots.style.cssText = 'color:#9ca3af;font-size:13px;padding:0 4px;';
+        btns.appendChild(dots);
+      }
+    }
+
+    const next       = document.createElement('button');
+    next.className   = 'page-btn';
+    next.textContent = '→';
+    next.disabled    = currentPage === totalPages;
+    next.onclick     = () => { currentPage++; renderPage(); };
+    btns.appendChild(next);
+
+    document.getElementById('paginationInfo').textContent =
+      'Page ' + currentPage + ' of ' + totalPages;
+  }
+
+  // Init on load
+  initPagination();
+
 </script>
 </body>
 </html>

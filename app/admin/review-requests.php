@@ -91,7 +91,7 @@ $pendingCount = $pdo->query("SELECT COUNT(*) FROM review_requests WHERE status='
     }
 
     .hamburger-menu {
-      position: absolute; top: 56px; right: 0;
+      position: fixed; top: 56px; right: 0;
       background: #1a1f2e; width: 230px;
       border-bottom: 1px solid rgba(255,255,255,0.08);
       border-radius: 0 0 0 12px;

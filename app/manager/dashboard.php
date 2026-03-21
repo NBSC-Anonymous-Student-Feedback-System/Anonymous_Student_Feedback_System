@@ -105,7 +105,7 @@ $allFeedback = $allFeedback->fetchAll();
 
     /* Dropdown menu */
     .hamburger-menu {
-      position: absolute; top: 56px; right: 0;
+      position: fixed; top: 56px; right: 0;
       background: #1a1f2e; width: 220px;
       border-right: 1px solid rgba(255,255,255,0.08);
       border-bottom: 1px solid rgba(255,255,255,0.08);

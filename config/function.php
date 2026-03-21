@@ -1,6 +1,6 @@
 <?php
 // ─── Encryption Key ───────────────────────────────────────────────
-define('ENCRYPT_KEY', 'nbsc_secret_key_2024');
+define('ENCRYPT_KEY', 'nbsc_secret_key_2024_secure_32by');
 
 // ─── Redirect ─────────────────────────────────────────────────────
 function redirect($url) {
@@ -46,16 +46,18 @@ function sanitize($val) {
 
 // ─── Encryption / Decryption (AES-256-CBC via OpenSSL) ────────────
 function encryptMessage($plaintext) {
+    $key = str_pad(ENCRYPT_KEY, 32, "\0");
     $iv  = openssl_random_pseudo_bytes(16);
-    $enc = openssl_encrypt($plaintext, 'AES-256-CBC', ENCRYPT_KEY, OPENSSL_RAW_DATA, $iv);
+    $enc = openssl_encrypt($plaintext, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
     return base64_encode($iv . $enc);
 }
 
 function decryptMessage($ciphertext) {
+    $key = str_pad(ENCRYPT_KEY, 32, "\0");
     $raw = base64_decode($ciphertext);
     $iv  = substr($raw, 0, 16);
     $enc = substr($raw, 16);
-    return openssl_decrypt($enc, 'AES-256-CBC', ENCRYPT_KEY, OPENSSL_RAW_DATA, $iv);
+    return openssl_decrypt($enc, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
 }
 
 function hashMessage($plaintext) {

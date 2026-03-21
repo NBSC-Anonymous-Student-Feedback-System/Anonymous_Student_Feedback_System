@@ -67,12 +67,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_feedback'])) {
 
 $mySubmissions = $pdo->prepare("
     SELECT f.feedback_id, f.category, f.priority, f.submitted_at, f.message_enc, f.message_hash,
-           r.review_notes
+           r.review_notes,
+           rr.status AS request_status
     FROM feedback f
     LEFT JOIN feedback_reviews r ON f.feedback_id = r.feedback_id
+    LEFT JOIN review_requests rr ON f.feedback_id = rr.feedback_id
+        AND rr.status IN ('pending','approved')
     WHERE f.submitted_by = ?
     ORDER BY f.submitted_at DESC
 ");
+
 $mySubmissions->execute([$_SESSION['user_id']]);
 $mySubmissions = $mySubmissions->fetchAll();
 
@@ -501,17 +505,24 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
             <div class="char-count"><span id="edit-count-<?= $fb['feedback_id'] ?>"><?= strlen($plain) ?></span>/1000
           </div>
           </form>
+        <?php $isAddressed = !empty($fb['request_status']); ?>
           <div class="fb-footer">
             <span><?= timeAgo($fb['submitted_at']) ?></span>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <button class="fb-action-btn btn-edit" id="edit-btn-<?= $fb['feedback_id'] ?>" onclick="startEdit(<?= $fb['feedback_id'] ?>)">Edit</button>
-              <button class="fb-action-btn btn-save" id="save-btn-<?= $fb['feedback_id'] ?>" style="display:none;" onclick="confirmUpdate(<?= $fb['feedback_id'] ?>)">Update</button>
-              <button class="fb-action-btn btn-cancel" id="cancel-btn-<?= $fb['feedback_id'] ?>" style="display:none;" onclick="cancelEdit(<?= $fb['feedback_id'] ?>)">Cancel</button>
-              <form method="POST" id="delete-form-<?= $fb['feedback_id'] ?>" style="display:inline;">
-                <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
-                <button type="button" class="fb-action-btn btn-delete" id="delete-btn-<?= $fb['feedback_id'] ?>" onclick="confirmDelete(<?= $fb['feedback_id'] ?>)">Delete</button>
-              </form>
-            </div>
+            <?php if ($isAddressed): ?>
+              <span style="font-size:12px;font-weight:600;color:#16a34a;display:flex;align-items:center;gap:5px;">
+                ✅ Feedback Addressed
+              </span>
+            <?php else: ?>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <button class="fb-action-btn btn-edit" id="edit-btn-<?= $fb['feedback_id'] ?>" onclick="startEdit(<?= $fb['feedback_id'] ?>)">Edit</button>
+                <button class="fb-action-btn btn-save" id="save-btn-<?= $fb['feedback_id'] ?>" style="display:none;" onclick="confirmUpdate(<?= $fb['feedback_id'] ?>)">Update</button>
+                <button class="fb-action-btn btn-cancel" id="cancel-btn-<?= $fb['feedback_id'] ?>" style="display:none;" onclick="cancelEdit(<?= $fb['feedback_id'] ?>)">Cancel</button>
+                <form method="POST" id="delete-form-<?= $fb['feedback_id'] ?>" style="display:inline;">
+                  <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
+                  <button type="button" class="fb-action-btn btn-delete" id="delete-btn-<?= $fb['feedback_id'] ?>" onclick="confirmDelete(<?= $fb['feedback_id'] ?>)">Delete</button>
+                </form>
+              </div>
+            <?php endif; ?>
           </div>
         </div>
         <?php if ($fb['review_notes']): ?>
@@ -522,7 +533,7 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
         <?php endif; ?>
       </div>
     <?php endforeach; endif; ?>
-
+    
      <!-- Pagination -->
     <div class="pagination-wrap" id="paginationWrap" style="display:none;">
       <span class="pagination-info" id="paginationInfo"></span>

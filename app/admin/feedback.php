@@ -14,9 +14,17 @@ $where = []; $params = [];
 if ($fp) { $where[] = 'priority=?'; $params[] = $fp; }
 if ($fc) { $where[] = 'category=?'; $params[] = $fc; }
 
-$sql = "SELECT feedback_id, category, priority, submitted_at FROM feedback";
+$sql = "
+    SELECT f.feedback_id, f.category, f.priority, f.submitted_at, f.message_enc,
+           rr.status AS request_status,
+           CONCAT(u.first_name,' ',u.last_name) AS manager_name
+    FROM feedback f
+    LEFT JOIN review_requests rr
+        ON f.feedback_id = rr.feedback_id AND rr.status = 'approved'
+    LEFT JOIN users u ON rr.requested_by = u.user_id
+";
 if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
-$sql .= ' ORDER BY submitted_at DESC';
+$sql .= ' ORDER BY f.submitted_at DESC';
 $stmt = $pdo->prepare($sql); $stmt->execute($params);
 $feedbacks = $stmt->fetchAll();
 
@@ -332,17 +340,31 @@ $categories = ['general','academic','facilities','services','faculty','administr
           </tr>
         </thead>
         <tbody id="feedbackBody">
+       
+       <tbody id="feedbackBody">
           <?php if (empty($feedbacks)): ?>
             <tr class="empty-row"><td colspan="5">No feedback found.</td></tr>
-          <?php else: foreach ($feedbacks as $fb): ?>
-             <tr data-priority="<?= $fb['priority'] ?>" data-category="<?= $fb['category'] ?>">
+          <?php else: foreach ($feedbacks as $fb):
+            $isDecrypted = $fb['request_status'] === 'approved';
+          ?>
+          <tr data-priority="<?= $fb['priority'] ?>" data-category="<?= $fb['category'] ?>">
             <td class="id-cell"><?= $fb['feedback_id'] ?></td>
             <td><?= categoryIcon($fb['category']) ?> <?= sanitize(categoryLabel($fb['category'])) ?></td>
             <td><?= priorityBadge($fb['priority']) ?></td>
             <td class="time-cell"><?= timeAgo($fb['submitted_at']) ?></td>
-            <td><span class="enc-tag">🔒 Encrypted</span></td>
+            <td>
+             <?php if ($isDecrypted && $fb['manager_name']): ?>
+                <div style="font-size:11px;color:#16a34a;font-weight:600;">
+                  ✅ Decrypted by <?= sanitize($fb['manager_name']) ?> (Manager)
+                </div>
+              <?php else: ?>
+                <span class="enc-tag">🔒 Encrypted</span>
+              <?php endif; ?>
+            </td>
           </tr>
           <?php endforeach; endif; ?>
+      
+
      <tbody id="feedbackBody">
       </table>
     </div>

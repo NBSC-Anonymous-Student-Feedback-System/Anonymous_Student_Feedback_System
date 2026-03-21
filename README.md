@@ -42,37 +42,55 @@ A web-based anonymous feedback system for Northern Bukidnon State College (NBSC)
 
 ```
 NBSC-s-Anonymous-Student-Feedback-System/
+<?php
+session_start();
+require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../config/function.php';
+requireRole('staff');
+header("Location: " . BASE_URL . "/app/manager/dashboard.php");
+exit;
+```
+
+**README structure to update** — your actual structure differs from the README in these ways:
+
+- `auth/` has `login.php` + `logout.php` (not 4 separate files)
+- No `includes/` folder (header/sidebar/footer no longer used)
+- `db/` folder instead of root-level `working_schema.sql`
+- `media/` folder for `logoweb.svg`
+- Root `index.php` exists
+
+Update your `README.md` to reflect the actual structure:
+```
+NBSC-Anonymous-Student-Feedback-System/
 ├── app/
 │   ├── admin/
+│   │   ├── activity-logs.php
 │   │   ├── dashboard.php
 │   │   ├── feedback.php
+│   │   ├── notifications.php
 │   │   ├── review-requests.php
-│   │   ├── users.php
-│   │   ├── activity-logs.php
-│   │   └── notifications.php
+│   │   └── users.php
+│   ├── auth/
+│   │   ├── login.php
+│   │   └── logout.php
 │   ├── manager/
 │   │   ├── dashboard.php
 │   │   ├── feedback.php
-│   │   ├── view-feedback.php
-│   │   └── notifications.php
-│   ├── user/
-│   │   └── index.php
-│   └── auth/
-│       ├── admin-login.php
-│       ├── admin-logout.php
-│       ├── student-login.php
-│       └── student-logout.php
-├── config/
-│   ├── config.php
-│   └── function.php
-├── includes/
-│   ├── header.php
-│   ├── sidebar.php
-│   └── footer.php
+│   │   ├── notifications.php
+│   │   └── view-feedback.php
+│   └── user/
+│       └── index.php
 ├── assets/
 │   └── css/
 │       └── style.css
-└── working_schema.sql
+├── config/
+│   ├── config.php
+│   └── function.php
+├── db/
+│   └── working_schema.sql
+├── media/
+│   └── logoweb.svg
+└── index.php
 ```
 
 ---
@@ -152,6 +170,13 @@ All accounts use the password: **`password`**
 
 ### Latest Changes
 
+- **Pagination** added across all major pages — Admin Feedback, Admin Notifications, Admin Review Requests, Admin Activity Logs, Admin Users, Manager Dashboard, Manager Notifications, Student Submissions -displays 10 items per page (5 for student submissions), with centered controls, ellipsis for large page counts, and responsive wrapping
+- **Inline filtering** added to Admin Feedback page — Priority and Category dropdowns filter the table instantly without page reload; pagination resets to page 1 on each filter change
+- **Inline filtering** added to Manager Dashboard — Time (Recent/Previous), Category, and Priority dropdowns filter feedback with only one active at a time; pagination integrated with filter results
+- **Inline filtering** added to Admin Dashboard Recent Feedback — Priority and Category dropdowns with live pagination
+- **Feedback Addressed** indicator added to Student Submissions — when a manager has a pending or approved review request on a feedback, the Edit and Delete buttons are replaced with a ✅ Feedback Addressed label, preventing modification
+- **Decrypted by Manager indicator** added to Admin Feedback page — Content column shows which manager was approved to read each feedback, displayed as ✅ Decrypted by [Name] (Manager) instead of the encrypted tag
+
 #### Removed Features
 - **Status field** removed from the `feedback` table and all related PHP files — feedback no longer tracks `pending`, `reviewed`, or `resolved` states
 - **Comments** system removed entirely — `comments` table and all admin/manager comment pages have been deleted
@@ -161,6 +186,17 @@ All accounts use the password: **`password`**
 - **Status filter** dropdown removed from admin and manager feedback filter forms
 - **Status stat cards** (Pending, Reviewed, Resolved) removed from admin and manager dashboards
 
+- **Filter and Reset buttons** removed from Admin Feedback page — replaced by instant dropdown-triggered filtering
+- **Activity Logs query updated** — LIMIT 200 removed so all logs are fetched and paginated
+
 #### Modified Features
 - **Off-hours restriction** updated — feedback reviews are now permitted **every day** (including weekends), 8:00 AM – 5:00 PM Philippine Time (previously Monday–Friday only)
 - **Manager role** corrected in schema — role value changed from `staff` to `manager` to match PHP authentication logic
+
+- **Hamburger dropdown changed** from position: absolute to position: fixed across all pages — dropdown now stays correctly anchored to the navbar when scrolling
+- **Staff/Admin accounts** made non-deletable in the Users management page — Delete button is hidden for users with staff or admin role
+- **Message character** limit increased from 200 to 1000 characters for both submission and edit forms across student and manager pages
+- **Admin Feedback** filtering changed from server-side GET form submission to client-side JS — Filter and Reset buttons removed; dropdowns trigger instant filtering
+- **AES-256-CBC encryption fixed** — encryptMessage and decryptMessage now use str_pad(ENCRYPT_KEY, 32, "\0") to ensure the key is always exactly 32 bytes, resolving the OpenSSL IV padding warning
+- **Admin Feedback content column updated** — shows 🔒 Encrypted tag by default; replaces it with manager name indicator when a review has been approved
+

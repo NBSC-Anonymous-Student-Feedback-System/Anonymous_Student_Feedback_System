@@ -155,6 +155,28 @@ $unreadNotif = getUnreadNotifCount($pdo, $_SESSION['user_id']);
       .user-chip .user-name { display: none; }
       .page-header { flex-direction: column; align-items: flex-start; }
     }
+
+    /* Pagination */
+.pagination-wrap {
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 10px;
+  padding: 16px 20px 20px; border-top: 1px solid #f3f4f6;
+}
+.pagination-info { font-size: 12px; color: #6b7280; }
+.pagination-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+
+.page-btn {
+  min-width: 34px; height: 34px; border-radius: 8px;
+  border: 1.5px solid #e5e7eb; background: #fff;
+  font-size: 13px; font-weight: 600; color: #374151;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; padding: 0 8px;
+}
+.page-btn:hover   { border-color: #1e40af; color: #1e40af; background: #eff6ff; }
+.page-btn.active  { background: linear-gradient(135deg, #1e40af, #0ea5e9); color: #fff; border-color: transparent; }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
   </style>
 </head>
 <body>
@@ -249,7 +271,15 @@ $unreadNotif = getUnreadNotifCount($pdo, $_SESSION['user_id']);
           <div class="notif-time"><?= timeAgo($n['created_at']) ?></div>
         </div>
       </div>
+      
     <?php endforeach; endif; ?>
+
+     <!-- Pagination -->
+    <div class="pagination-wrap" id="paginationWrap" style="display:none;">
+      <span class="pagination-info" id="paginationInfo"></span>
+      <div class="pagination-btns" id="pageButtons"></div>
+    </div>
+
   </div>
 </div>
 
@@ -264,6 +294,79 @@ $unreadNotif = getUnreadNotifCount($pdo, $_SESSION['user_id']);
       menu.classList.remove('open');
     }
   });
+
+  // ── Notifications Pagination ──
+  const NOTIFS_PER_PAGE = 10;
+  let notifCurrentPage  = 1;
+
+  function initNotifPagination() {
+    notifCurrentPage = 1;
+    renderNotifPage();
+  }
+
+  function renderNotifPage() {
+    const items = Array.from(document.querySelectorAll('.notif-item'));
+    if (items.length === 0) return;
+
+    items.forEach(i => i.style.display = 'none');
+
+    const start = (notifCurrentPage - 1) * NOTIFS_PER_PAGE;
+    const end   = start + NOTIFS_PER_PAGE;
+    items.slice(start, end).forEach(i => i.style.display = '');
+
+    renderNotifPagination(items.length);
+  }
+
+  function renderNotifPagination(total) {
+    const totalPages = Math.ceil(total / NOTIFS_PER_PAGE);
+    const wrap       = document.getElementById('paginationWrap');
+    const btns       = document.getElementById('pageButtons');
+
+    if (totalPages <= 1) { wrap.style.display = 'none'; return; }
+
+    wrap.style.display = 'flex';
+    btns.innerHTML     = '';
+
+    // Prev
+    const prev       = document.createElement('button');
+    prev.className   = 'page-btn';
+    prev.textContent = '←';
+    prev.disabled    = notifCurrentPage === 1;
+    prev.onclick     = () => { notifCurrentPage--; renderNotifPage(); };
+    btns.appendChild(prev);
+
+    // Page numbers with ellipsis
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= notifCurrentPage - 1 && i <= notifCurrentPage + 1)) {
+        const btn       = document.createElement('button');
+        btn.className   = 'page-btn' + (i === notifCurrentPage ? ' active' : '');
+        btn.textContent = i;
+        btn.onclick     = (function(page) {
+          return function() { notifCurrentPage = page; renderNotifPage(); };
+        })(i);
+        btns.appendChild(btn);
+      } else if (i === notifCurrentPage - 2 || i === notifCurrentPage + 2) {
+        const dots         = document.createElement('span');
+        dots.textContent   = '…';
+        dots.style.cssText = 'color:#9ca3af;font-size:13px;padding:0 4px;';
+        btns.appendChild(dots);
+      }
+    }
+
+    // Next
+    const next       = document.createElement('button');
+    next.className   = 'page-btn';
+    next.textContent = '→';
+    next.disabled    = notifCurrentPage === totalPages;
+    next.onclick     = () => { notifCurrentPage++; renderNotifPage(); };
+    btns.appendChild(next);
+
+    document.getElementById('paginationInfo').textContent =
+      'Page ' + notifCurrentPage + ' of ' + totalPages;
+  }
+
+  // Init on load
+  initNotifPagination();
 </script>
 </body>
 </html>

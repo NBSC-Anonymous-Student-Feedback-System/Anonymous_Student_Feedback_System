@@ -390,6 +390,7 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
     </div>
   </div>
 </div>
+</div>
 
   <!-- SECTION: Submit Feedback -->
   <div class="page-section" id="section-submit">

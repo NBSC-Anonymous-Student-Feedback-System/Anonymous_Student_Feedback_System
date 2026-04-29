@@ -461,6 +461,7 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
     </div>
   </div>
 
+  
   <!-- SECTION: My Submissions -->
    <div id="submissionsList">
   <div class="page-section" id="section-submissions">

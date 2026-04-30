@@ -353,6 +353,20 @@ $allFeedback = $allFeedback->fetchAll();
 .page-btn.active   { background: linear-gradient(135deg, #1e40af, #0ea5e9); color: #fff; border-color: transparent; }
 .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+.charts-card { background: #fff; border-radius: 14px; border: 1px solid #e5e7eb; padding: 20px 24px; margin-bottom: 24px; }
+.chart-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.chart-title { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+.pie-wrap { display: flex; flex-direction: column; align-items: center; }
+.pie-legend { list-style: none; padding: 0; margin: 10px 0 0; width: 100%; }
+.pie-legend li { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #374151; margin-bottom: 5px; }
+.pie-legend li span.dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.pie-legend li span.lbl { flex: 1; }
+.pie-legend li span.val { color: #6b7280; font-size: 11px; }
+
+@media (max-width: 640px) {
+  .chart-cols { grid-template-columns: 1fr; gap: 24px; }
+}
+
   </style>
 </head>
 <body>
@@ -417,17 +431,18 @@ $allFeedback = $allFeedback->fetchAll();
   </div>
 <?php endif; ?>
 
-  <!-- Stats -->
-  <div class="stats-row">
-    <div class="stat-card blue">
-      <div class="stat-label">Total Feedback</div>
-      <div class="stat-value"><?= $totalFeedback ?></div>
-    </div>
-    <div class="stat-card red">
-      <div class="stat-label">Urgent</div>
-      <div class="stat-value"><?= $urgentCount ?></div>
+<!-- Stats Pie Chart -->
+<div class="charts-card" style="margin-bottom:24px;">
+  <div class="chart-cols" style="grid-template-columns:1fr;">
+    <div>
+      <div class="chart-title">Feedback by Priority</div>
+      <div class="pie-wrap">
+        <canvas id="priorityPie" width="160" height="160"></canvas>
+        <ul class="pie-legend" id="priorityLegend"></ul>
+      </div>
     </div>
   </div>
+</div>
 
   <!-- Filter Bar -->
   <div class="filter-bar">
@@ -757,6 +772,80 @@ $allFeedback = $allFeedback->fetchAll();
   document.getElementById('requestModal').addEventListener('click', function(e) {
     if (e.target === this) closeRequestModal();
   });
+
+  
+function buildPriorityPie() {
+  const rows = document.querySelectorAll('#feedbackBody tr[data-priority]');
+  const counts = { Urgent: 0, High: 0, Medium: 0, Low: 0 };
+  rows.forEach(r => {
+    const p = r.getAttribute('data-priority');
+    if (counts[p] !== undefined) counts[p]++;
+  });
+
+  const priorityData = [
+    { label: 'Urgent', count: counts.Urgent, color: '#dc2626' },
+    { label: 'High',   count: counts.High,   color: '#ea580c' },
+    { label: 'Medium', count: counts.Medium, color: '#d97706' },
+    { label: 'Low',    count: counts.Low,    color: '#16a34a' }
+  ];
+
+  drawPie('priorityPie', 'priorityLegend', priorityData);
+}
+
+function drawPie(canvasId, legendId, data) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cx = canvas.width / 2, cy = canvas.height / 2, r = 68;
+  const total = data.reduce((s, d) => s + d.count, 0);
+
+  const slices = [];
+  let angle = -Math.PI / 2;
+  data.forEach(d => {
+    const sweep = total > 0 ? (d.count / total) * 2 * Math.PI : 0;
+    slices.push({ ...d, start: angle, end: angle + sweep });
+    angle += sweep;
+  });
+
+  const legend = document.getElementById(legendId);
+  legend.innerHTML = '';
+  data.forEach(d => {
+    const pct = total > 0 ? Math.round((d.count / total) * 100) : 0;
+    legend.innerHTML += `<li>
+      <span class="dot" style="background:${d.color}"></span>
+      <span class="lbl">${d.label}</span>
+      <span class="val">${d.count} (${pct}%)</span>
+    </li>`;
+  });
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (total === 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+    ctx.fillStyle = '#f3f4f6';
+    ctx.fill();
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data', cx, cy + 4);
+    return;
+  }
+
+  slices.forEach(s => {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, s.start, s.end);
+    ctx.closePath();
+    ctx.fillStyle = s.color;
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+}
+
+buildPriorityPie();
   
 </script>
 </body>

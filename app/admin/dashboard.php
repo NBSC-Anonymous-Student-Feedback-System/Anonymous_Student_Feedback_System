@@ -359,6 +359,7 @@ $recentLogs     = $pdo->query("
     }
   });
 
+  
 const userPieData = [
   { label: 'Admins',   count: <?= (int)$totalAdmins ?>,   color: '#1d4ed8' },
   { label: 'Managers', count: <?= (int)$totalManagers ?>, color: '#16a34a' },

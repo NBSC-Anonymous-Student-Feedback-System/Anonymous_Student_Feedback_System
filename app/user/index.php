@@ -803,7 +803,7 @@ function drawPie(canvasId, legendId, data) {
     const lx = cx + Math.cos(midAngle) * labelR;
     const ly = cy + Math.sin(midAngle) * labelR;
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 11px sans-serif';
+    ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(pct + '%', lx, ly);

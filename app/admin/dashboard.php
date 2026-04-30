@@ -33,6 +33,7 @@ $recentLogs     = $pdo->query("
     *, *::before, *::after { box-sizing: border-box; }
     body { background: #f0f2f5; margin: 0; font-family: 'Inter', sans-serif; }
 
+    
     /* ── Navbar ── */
     .adm-navbar {
       position: sticky; top: 0; z-index: 200;
@@ -359,7 +360,7 @@ $recentLogs     = $pdo->query("
     }
   });
 
-  
+
 const userPieData = [
   { label: 'Admins',   count: <?= (int)$totalAdmins ?>,   color: '#1d4ed8' },
   { label: 'Managers', count: <?= (int)$totalManagers ?>, color: '#16a34a' },

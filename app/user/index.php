@@ -734,8 +734,17 @@ const catData = [
 function drawPie(canvasId, legendId, data) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
+   const dpr = window.devicePixelRatio || 1;
+  const size = 200;
+  canvas.width  = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width  = size + 'px';
+  canvas.style.height = size + 'px';
+
   const ctx = canvas.getContext('2d');
-  const cx = canvas.width / 2, cy = canvas.height / 2, r = 68;
+  ctx.scale(dpr, dpr);
+
+  const cx = size / 2, cy = size / 2, r = 68;  // use size, not canvas.width
   const total = data.reduce((s, d) => s + d.count, 0);
 
   const slices = [];

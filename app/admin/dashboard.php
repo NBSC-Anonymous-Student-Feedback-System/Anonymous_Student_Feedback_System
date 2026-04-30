@@ -137,6 +137,16 @@ $recentLogs     = $pdo->query("
     .stat-card.orange .stat-value { color: #d97706; }
     .stat-card.red    .stat-value { color: #dc2626; }
 
+    .charts-card { background: #fff; border-radius: 14px; border: 1px solid #e5e7eb; padding: 20px 24px; margin-bottom: 24px; }
+.chart-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.chart-title { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+.pie-wrap { display: flex; flex-direction: column; align-items: center; }
+.pie-legend { list-style: none; padding: 0; margin: 10px 0 0; width: 100%; }
+.pie-legend li { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #374151; margin-bottom: 5px; }
+.pie-legend li span.dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.pie-legend li span.lbl { flex: 1; }
+.pie-legend li span.val { color: #6b7280; font-size: 11px; }
+
     /* Two column layout */
     .two-col { display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
 
@@ -267,37 +277,25 @@ $recentLogs     = $pdo->query("
     <p>Welcome back, <?= sanitize($_SESSION['first_name']) ?>. System overview.</p>
   </div>
 
-  <!-- User Stats -->
-  <div class="stats-row">
-    <div class="stat-card purple">
-      <div class="stat-label">Total Users</div>
-      <div class="stat-value"><?= $totalUsers ?></div>
+ <!-- Stats Pie Charts -->
+<div class="charts-card" style="margin-bottom:24px;">
+  <div class="chart-cols">
+    <div>
+      <div class="chart-title">Users by Role</div>
+      <div class="pie-wrap">
+        <canvas id="userPie" width="160" height="160"></canvas>
+        <ul class="pie-legend" id="userLegend"></ul>
+      </div>
     </div>
-    <div class="stat-card blue">
-      <div class="stat-label">Admins</div>
-      <div class="stat-value"><?= $totalAdmins ?></div>
-    </div>
-    <div class="stat-card green">
-      <div class="stat-label">Managers</div>
-      <div class="stat-value"><?= $totalManagers ?></div>
-    </div>
-    <div class="stat-card orange">
-      <div class="stat-label">Students</div>
-      <div class="stat-value"><?= $totalStudents ?></div>
-    </div>
-  </div>
-
-  <!-- Feedback Stats -->
-  <div class="stats-row-2">
-    <div class="stat-card blue">
-      <div class="stat-label">Total Feedback</div>
-      <div class="stat-value"><?= $totalFeedback ?></div>
-    </div>
-    <div class="stat-card red">
-      <div class="stat-label">Urgent</div>
-      <div class="stat-value"><?= $urgentCount ?></div>
+    <div>
+      <div class="chart-title">Feedback Overview</div>
+      <div class="pie-wrap">
+        <canvas id="feedbackPie" width="160" height="160"></canvas>
+        <ul class="pie-legend" id="feedbackLegend"></ul>
+      </div>
     </div>
   </div>
+</div>
 
   <!-- Two Column -->
   <div class="two-col">
@@ -360,6 +358,74 @@ $recentLogs     = $pdo->query("
       menu.classList.remove('open');
     }
   });
+
+const userPieData = [
+  { label: 'Admins',   count: <?= (int)$totalAdmins ?>,   color: '#1d4ed8' },
+  { label: 'Managers', count: <?= (int)$totalManagers ?>, color: '#16a34a' },
+  { label: 'Students', count: <?= (int)$totalStudents ?>, color: '#d97706' }
+];
+
+const feedbackPieData = [
+  { label: 'Urgent',      count: <?= (int)$urgentCount ?>,                          color: '#dc2626' },
+  { label: 'Non-Urgent',  count: <?= (int)($totalFeedback - $urgentCount) ?>,       color: '#1d4ed8' }
+];
+
+function drawPie(canvasId, legendId, data) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cx = canvas.width / 2, cy = canvas.height / 2, r = 68;
+  const total = data.reduce((s, d) => s + d.count, 0);
+
+  const slices = [];
+  let angle = -Math.PI / 2;
+  data.forEach(d => {
+    const sweep = total > 0 ? (d.count / total) * 2 * Math.PI : 0;
+    slices.push({ ...d, start: angle, end: angle + sweep });
+    angle += sweep;
+  });
+
+  // Legend
+  const legend = document.getElementById(legendId);
+  legend.innerHTML = '';
+  data.forEach(d => {
+    const pct = total > 0 ? Math.round((d.count / total) * 100) : 0;
+    legend.innerHTML += `<li>
+      <span class="dot" style="background:${d.color}"></span>
+      <span class="lbl">${d.label}</span>
+      <span class="val">${d.count} (${pct}%)</span>
+    </li>`;
+  });
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (total === 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+    ctx.fillStyle = '#f3f4f6';
+    ctx.fill();
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data', cx, cy + 4);
+    return;
+  }
+
+  slices.forEach(s => {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, s.start, s.end);
+    ctx.closePath();
+    ctx.fillStyle = s.color;
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+}
+
+drawPie('userPie',     'userLegend',     userPieData);
+drawPie('feedbackPie', 'feedbackLegend', feedbackPieData);
 </script>
 </body>
 </html>

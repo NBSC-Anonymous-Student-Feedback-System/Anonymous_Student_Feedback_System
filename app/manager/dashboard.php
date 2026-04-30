@@ -357,7 +357,7 @@ $allFeedback = $allFeedback->fetchAll();
 .chart-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
 .chart-title { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
 .pie-wrap { display: flex; flex-direction: column; align-items: center; }
-.pie-legend { list-style: none; padding: 0; margin: 10px 0 0; width: 100%; }
+.pie-legend { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: center; }
 .pie-legend li { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #374151; margin-bottom: 5px; }
 .pie-legend li span.dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .pie-legend li span.lbl { flex: 1; }
@@ -792,11 +792,39 @@ function buildPriorityPie() {
   drawPie('priorityPie', 'priorityLegend', priorityData);
 }
 
+function buildPriorityPie() {
+  const rows = document.querySelectorAll('#feedbackBody tr[data-priority]');
+  const counts = { Urgent: 0, High: 0, Medium: 0, Low: 0 };
+  rows.forEach(r => {
+    const p = r.getAttribute('data-priority');
+    if (counts[p] !== undefined) counts[p]++;
+  });
+
+  const priorityData = [
+    { label: 'Urgent', count: counts.Urgent, color: '#dc2626' },
+    { label: 'High',   count: counts.High,   color: '#ea580c' },
+    { label: 'Medium', count: counts.Medium, color: '#d97706' },
+    { label: 'Low',    count: counts.Low,    color: '#16a34a' }
+  ];
+
+  drawPie('priorityPie', 'priorityLegend', priorityData);
+}
+
 function drawPie(canvasId, legendId, data) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const size = 160;
+  canvas.width  = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width  = size + 'px';
+  canvas.style.height = size + 'px';
+
   const ctx = canvas.getContext('2d');
-  const cx = canvas.width / 2, cy = canvas.height / 2, r = 68;
+  ctx.scale(dpr, dpr);
+
+  const cx = size / 2, cy = size / 2, r = 68;
   const total = data.reduce((s, d) => s + d.count, 0);
 
   const slices = [];
@@ -807,14 +835,14 @@ function drawPie(canvasId, legendId, data) {
     angle += sweep;
   });
 
+  // Horizontal legend
   const legend = document.getElementById(legendId);
   legend.innerHTML = '';
   data.forEach(d => {
-    const pct = total > 0 ? Math.round((d.count / total) * 100) : 0;
     legend.innerHTML += `<li>
       <span class="dot" style="background:${d.color}"></span>
       <span class="lbl">${d.label}</span>
-      <span class="val">${d.count} (${pct}%)</span>
+      <span class="val">${d.count}</span>
     </li>`;
   });
 
@@ -828,10 +856,12 @@ function drawPie(canvasId, legendId, data) {
     ctx.fillStyle = '#9ca3af';
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('No data', cx, cy + 4);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('No data', cx, cy);
     return;
   }
 
+  // Draw slices
   slices.forEach(s => {
     ctx.beginPath();
     ctx.moveTo(cx, cy);
@@ -842,6 +872,20 @@ function drawPie(canvasId, legendId, data) {
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 2;
     ctx.stroke();
+  });
+
+  // Percentage labels inside slices
+  slices.forEach(s => {
+    const pct = Math.round((s.count / total) * 100);
+    if (pct === 0) return;
+    const midAngle = (s.start + s.end) / 2;
+    const lx = cx + Math.cos(midAngle) * r * 0.62;
+    const ly = cy + Math.sin(midAngle) * r * 0.62;
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(pct + '%', lx, ly);
   });
 }
 

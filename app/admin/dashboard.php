@@ -33,7 +33,7 @@ $recentLogs     = $pdo->query("
     *, *::before, *::after { box-sizing: border-box; }
     body { background: #f0f2f5; margin: 0; font-family: 'Inter', sans-serif; }
 
-    
+
     /* ── Navbar ── */
     .adm-navbar {
       position: sticky; top: 0; z-index: 200;
@@ -202,7 +202,12 @@ $recentLogs     = $pdo->query("
       .stats-row { grid-template-columns: 1fr 1fr; }
       .stats-row-2 { grid-template-columns: 1fr; }
       .user-chip .user-name { display: none; }
+
     }
+
+    @media (max-width: 640px) {
+  .chart-cols { grid-template-columns: 1fr; gap: 24px; }
+}
   </style>
 </head>
 <body>

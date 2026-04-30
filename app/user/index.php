@@ -192,21 +192,19 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
     .stat-card.orange .stat-value { color: #d97706; }
     .stat-card.purple .stat-value { color: #7c3aed; font-size: 14px; margin-top: 4px; }
 
-    /* Charts */
-    .charts-card { background: #fff; border-radius: 14px; border: 1px solid #e5e7eb; padding: 20px 24px; margin-bottom: 24px; }
-    .charts-card-title { font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 16px; }
-    .chart-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
-    .chart-title { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
-    .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
-    .bar-label { font-size: 12px; color: #374151; width: 100px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .bar-track { flex: 1; background: #f3f4f6; border-radius: 99px; height: 8px; }
-    .bar-fill  { height: 8px; border-radius: 99px; background: linear-gradient(90deg, #1e40af, #0ea5e9); }
-    .bar-count { font-size: 11px; color: #6b7280; width: 20px; text-align: right; flex-shrink: 0; }
-    .pri-bar-row   { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
-    .pri-bar-label { font-size: 12px; font-weight: 600; width: 60px; flex-shrink: 0; }
-    .pri-bar-track { flex: 1; background: #f3f4f6; border-radius: 99px; height: 8px; }
-    .pri-bar-fill  { height: 8px; border-radius: 99px; }
-    .pri-bar-count { font-size: 11px; color: #6b7280; width: 20px; text-align: right; }
+  /* Charts */
+.charts-card { background: #fff; border-radius: 14px; border: 1px solid #e5e7eb; padding: 20px 24px; margin-bottom: 24px; }
+.charts-card-title { font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 16px; }
+.chart-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.chart-title { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+.pie-wrap { display: flex; flex-direction: column; align-items: center; }
+.pie-wrap canvas { cursor: pointer; }
+
+.pie-legend { list-style: none; padding: 0; margin: 10px 0 0; width: 100%; display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: center; }
+.pie-legend li { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #374151; }
+.pie-legend li span.dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.pie-legend li span.lbl { }
+.pie-legend li span.val { color: #6b7280; font-size: 11px; }
 
     /* Submit card */
     .submit-card { background: #fff; border-radius: 14px; border: 1px solid #e5e7eb; overflow: hidden; margin-bottom: 24px; }
@@ -374,37 +372,26 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
       </div>
     </div>
 
-    <div class="charts-card">
-      <div class="charts-card-title">Feedback Distribution</div>
-      <div class="chart-cols">
-        <div>
-          <div class="chart-title">By Priority</div>
-          <?php
-          $priData = ['Urgent'=>[$urgentCount,'#dc2626'],'High'=>[$highCount,'#ea580c'],'Medium'=>[$mediumCount,'#d97706'],'Low'=>[$lowCount,'#16a34a']];
-          foreach ($priData as $label => [$count, $color]):
-            $pct = $totalFeedback > 0 ? round(($count / $totalFeedback) * 100) : 0; ?>
-          <div class="pri-bar-row">
-            <div class="pri-bar-label" style="color:<?= $color ?>"><?= $label ?></div>
-            <div class="pri-bar-track"><div class="pri-bar-fill" style="width:<?= $pct ?>%;background:<?= $color ?>;"></div></div>
-            <div class="pri-bar-count"><?= $count ?></div>
-          </div>
-          <?php endforeach; ?>
-        </div>
-        <div>
-          <div class="chart-title">By Category</div>
-          <?php foreach ($catStats as $cs):
-            $pct = $totalFeedback > 0 ? round(($cs['total'] / $totalFeedback) * 100) : 0; ?>
-          <div class="bar-row">
-            <div class="bar-label"><?= categoryIcon($cs['category']) ?> <?= sanitize(categoryLabel($cs['category'])) ?></div>
-            <div class="bar-track"><div class="bar-fill" style="width:<?= $pct ?>%;"></div></div>
-            <div class="bar-count"><?= $cs['total'] ?></div>
-          </div>
-          <?php endforeach; ?>
-          <?php if (empty($catStats)): ?><div style="font-size:13px;color:#6b7280;padding:8px 0;">No data yet.</div><?php endif; ?>
-        </div>
+   <div class="charts-card">
+  <div class="charts-card-title">Feedback Distribution</div>
+  <div class="chart-cols">
+    <div>
+      <div class="chart-title">By Priority</div>
+      <div class="pie-wrap">
+        <canvas id="priPie" width="160" height="160"></canvas>
+        <ul class="pie-legend" id="priLegend"></ul>
+      </div>
+    </div>
+    <div>
+      <div class="chart-title">By Category</div>
+      <div class="pie-wrap">
+        <canvas id="catPie" width="160" height="160"></canvas>
+        <ul class="pie-legend" id="catLegend"></ul>
       </div>
     </div>
   </div>
+</div>
+</div>
 
   <!-- SECTION: Submit Feedback -->
   <div class="page-section" id="section-submit">
@@ -461,6 +448,7 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
     </div>
   </div>
 
+  
   <!-- SECTION: My Submissions -->
    <div id="submissionsList">
   <div class="page-section" id="section-submissions">
@@ -726,6 +714,104 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
   <?php if (isset($_GET['updated']) || isset($_GET['deleted'])): ?>
     initSubmissionPagination();
   <?php endif; ?>
+
+
+// Priority data from PHP
+const priData = [
+  { label: 'Urgent', count: <?= (int)$urgentCount ?>, color: '#dc2626' },
+  { label: 'High',   count: <?= (int)$highCount ?>,   color: '#ea580c' },
+  { label: 'Medium', count: <?= (int)$mediumCount ?>, color: '#d97706' },
+  { label: 'Low',    count: <?= (int)$lowCount ?>,    color: '#16a34a' }
+];
+
+// Category data from PHP — random distinct colors
+const catColors = ['#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#06b6d4','#ef4444','#6366f1'];
+const catData = [
+  <?php foreach ($catStats as $i => $cs): ?>
+  { label: '<?= addslashes(categoryLabel($cs['category'])) ?>', count: <?= (int)$cs['total'] ?>, color: catColors[<?= $i ?> % catColors.length] },
+  <?php endforeach; ?>
+];
+function drawPie(canvasId, legendId, data) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+   const dpr = window.devicePixelRatio || 1;
+  const size = 200;
+  canvas.width  = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width  = size + 'px';
+  canvas.style.height = size + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const cx = size / 2, cy = size / 2, r = 68;  // use size, not canvas.width
+  const total = data.reduce((s, d) => s + d.count, 0);
+
+  const slices = [];
+  let angle = -Math.PI / 2;
+  data.forEach(d => {
+    const sweep = total > 0 ? (d.count / total) * 2 * Math.PI : 0;
+    slices.push({ ...d, start: angle, end: angle + sweep });
+    angle += sweep;
+  });
+
+  // Legend — horizontal
+  const legend = document.getElementById(legendId);
+  legend.innerHTML = '';
+  data.forEach(d => {
+    const pct = total > 0 ? Math.round((d.count / total) * 100) : 0;
+    legend.innerHTML += `<li>
+      <span class="dot" style="background:${d.color}"></span>
+      <span class="lbl">${d.label}</span>
+      <span class="val">${d.count}</span>
+    </li>`;
+  });
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (total === 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+    ctx.fillStyle = '#f3f4f6';
+    ctx.fill();
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data', cx, cy + 4);
+    return;
+  }
+
+  // Draw slices
+  slices.forEach(s => {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, s.start, s.end);
+    ctx.closePath();
+    ctx.fillStyle = s.color;
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+
+  // Draw percentage labels inside slices
+  slices.forEach(s => {
+    const pct = Math.round((s.count / total) * 100);
+    if (pct === 0) return; // skip empty slices
+    const midAngle = (s.start + s.end) / 2;
+    const labelR = r * 0.62; // distance from center
+    const lx = cx + Math.cos(midAngle) * labelR;
+    const ly = cy + Math.sin(midAngle) * labelR;
+    ctx.fillStyle = '#fff';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(pct + '%', lx, ly);
+  });
+}
+
+drawPie('priPie', 'priLegend', priData);
+drawPie('catPie', 'catLegend', catData);
 </script>
 </body>
 </html>

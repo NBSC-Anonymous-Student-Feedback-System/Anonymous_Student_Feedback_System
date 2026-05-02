@@ -22,8 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email      = trim($_POST['email'] ?? '');
     $password   = trim($_POST['password'] ?? '');
     $confirm    = trim($_POST['confirm_password'] ?? '');
-    $role       = 'student'; // Always student — admin/manager created by admin only
-    $department = 'General'; // Default department
+    $role       = 'student';
+    $department = 'General';
 
     if (!$school_id) {
         $error = 'School ID is required.';
@@ -49,13 +49,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'This School ID is already registered.';
             } else {
                 $hash = password_hash($password, PASSWORD_BCRYPT);
-
                 $pdo->prepare("INSERT INTO users (school_id, first_name, last_name, email, password, role, department, status) VALUES (?,?,?,?,?,?,?,'active')")
                     ->execute([$school_id, $first_name, $last_name, $email, $hash, $role, $department]);
-
                 logActivity($pdo, 'USER_REGISTERED', "New student registered: $first_name $last_name (School ID: $school_id)", null);
-
-                $success = 'Account created successfully! You can now sign in.';
+                $success = "$first_name $last_name";
             }
         }
     }
@@ -69,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <title>Register — NBSC Feedback System</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     *, *::before, *::after { box-sizing: border-box; }
 
     body {
@@ -156,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       box-shadow: 0 0 0 3px rgba(30,64,175,0.10);
     }
 
-    /* ── Name row (side by side) ── */
+    /* ── Name row ── */
     .name-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -207,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       color: #9ca3af;
     }
 
-    /* ── Alerts ── */
+    /* ── Error alert ── */
     .alert-error {
       background: #fef2f2;
       border: 1px solid #fca5a5;
@@ -217,18 +214,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       font-size: 13px;
       margin-bottom: 18px;
     }
-    .alert-success {
-      background: #f0fdf4;
-      border: 1px solid #86efac;
-      color: #166534;
-      border-radius: 9px;
-      padding: 10px 14px;
-      font-size: 13px;
-      margin-bottom: 18px;
+
+    /* ── Success state ── */
+    .success-wrap {
+      text-align: center;
+      padding: 12px 0 8px;
     }
-    .alert-success a {
-      color: #166534;
-      font-weight: 600;
+    .success-icon-ring {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #16a34a, #22c55e);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+      box-shadow: 0 8px 24px rgba(22,163,74,0.30);
+      font-size: 36px;
+    }
+    .success-title {
+      font-size: 20px; font-weight: 800;
+      color: #111827; margin: 0 0 6px;
+    }
+    .success-name {
+      font-size: 15px; font-weight: 600;
+      color: #1e40af; margin: 0 0 8px;
+    }
+    .success-sub {
+      font-size: 13px; color: #6b7280;
+      line-height: 1.6; margin: 0 0 28px;
+    }
+    .btn-signin {
+      display: block; width: 100%; padding: 12px;
+      background: linear-gradient(135deg, #1e40af, #0ea5e9);
+      color: #fff; border: none;
+      border-radius: 11px;
+      font-size: 14px; font-weight: 700;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      text-decoration: none;
+      text-align: center;
+      transition: opacity 0.2s;
+      margin-bottom: 10px;
+    }
+    .btn-signin:hover { opacity: 0.90; color: #fff; }
+
+    .success-divider {
+      display: flex; align-items: center; gap: 10px;
+      margin: 4px 0 14px;
+      color: #d1d5db; font-size: 12px;
+    }
+    .success-divider::before,
+    .success-divider::after {
+      content: ''; flex: 1;
+      height: 1px; background: #e5e7eb;
+    }
+
+    .success-info {
+      display: flex; flex-direction: column; gap: 8px;
+      background: #f9fafb; border-radius: 10px;
+      padding: 14px 16px; margin-bottom: 20px;
+      border: 1px solid #f3f4f6;
+      text-align: left;
+    }
+    .success-info-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12.5px; color: #6b7280;
+    }
+    .success-info-row span.check {
+      color: #16a34a; font-size: 14px; flex-shrink: 0;
     }
 
     @media (max-width: 480px) {
@@ -240,7 +291,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
   <div class="register-wrap">
 
-    <!-- ── Brand Header ── -->
+    <!-- ── Brand Header ── */-->
     <div class="brand-header">
       <div class="brand-logo">
         <img src="<?= BASE_URL ?>/media/logoweb.svg" alt="NBSC Logo">
@@ -251,19 +302,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <!-- ── Register Card ── -->
     <div class="register-card">
-      <p class="register-card-title">Create an Account</p>
-      <p class="register-card-sub">Register with your NBSC school credentials</p>
-
-      <?php if ($error): ?>
-        <div class="alert-error">⚠️ <?= sanitize($error) ?></div>
-      <?php endif; ?>
 
       <?php if ($success): ?>
-        <div class="alert-success">
-          ✅ <?= sanitize($success) ?>
-          <br><a href="<?= BASE_URL ?>/app/auth/login.php">Click here to Sign In →</a>
+
+        <!-- ── SUCCESS STATE ── -->
+        <div class="success-wrap">
+          <div class="success-icon-ring">✓</div>
+          <p class="success-title">You're all set!</p>
+          <p class="success-name">Welcome, <?= sanitize($success) ?> 👋</p>
+          <p class="success-sub">Your student account has been created.<br>Sign in to start submitting anonymous feedback.</p>
+
+          <!-- Account summary -->
+          <div class="success-info">
+            <div class="success-info-row">
+              <span class="check">✅</span>
+              <span>Account created as <strong>Student</strong></span>
+            </div>
+            <div class="success-info-row">
+              <span class="check">✅</span>
+              <span>Email verified as NBSC address</span>
+            </div>
+            <div class="success-info-row">
+              <span class="check">✅</span>
+              <span>Identity fully protected — 100% anonymous</span>
+            </div>
+          </div>
+
+          <a href="<?= BASE_URL ?>/app/auth/login.php" class="btn-signin">
+            Sign In Now →
+          </a>
+
+          <div class="success-divider">or</div>
+
+          <div class="login-link" style="margin-top:0;">
+            <a href="<?= BASE_URL ?>/app/auth/register.php">Register another account</a>
+          </div>
         </div>
+
       <?php else: ?>
+
+        <!-- ── FORM STATE ── -->
+        <p class="register-card-title">Create an Account</p>
+        <p class="register-card-sub">Register with your NBSC school credentials</p>
+
+        <?php if ($error): ?>
+          <div class="alert-error">⚠️ <?= sanitize($error) ?></div>
+        <?php endif; ?>
 
         <form method="POST">
 
@@ -363,9 +447,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php endif; ?>
 
       <!-- ── Login Link ── -->
-      <div class="login-link">
-        Already have an account? <a href="<?= BASE_URL ?>/app/auth/login.php">Sign In</a>
-      </div>
+      <?php if (!$success): ?>
+        <div class="login-link">
+          Already have an account? <a href="<?= BASE_URL ?>/app/auth/login.php">Sign In</a>
+        </div>
+      <?php endif; ?>
 
       <!-- ── Footer ── -->
       <div class="register-footer">
@@ -381,7 +467,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       input.type = input.type === 'password' ? 'text' : 'password';
     }
 
-    // Live email validation — only allow @nbsc.edu.ph
+    // Live email validation
     document.querySelector('input[name="email"]')?.addEventListener('blur', function() {
       const val = this.value.trim();
       if (val && !val.endsWith('@nbsc.edu.ph')) {

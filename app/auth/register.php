@@ -16,14 +16,21 @@ $error   = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $school_id = trim($_POST['school_id'] ?? '');
-    $email     = trim($_POST['email'] ?? '');
-    $password  = trim($_POST['password'] ?? '');
-    $confirm   = trim($_POST['confirm_password'] ?? '');
-    $role      = 'student'; // Always student — admin/manager created by admin only
+    $school_id  = trim($_POST['school_id'] ?? '');
+    $first_name = trim($_POST['first_name'] ?? '');
+    $last_name  = trim($_POST['last_name'] ?? '');
+    $email      = trim($_POST['email'] ?? '');
+    $password   = trim($_POST['password'] ?? '');
+    $confirm    = trim($_POST['confirm_password'] ?? '');
+    $role       = 'student'; // Always student — admin/manager created by admin only
+    $department = 'General'; // Default department
 
     if (!$school_id) {
         $error = 'School ID is required.';
+    } elseif (!$first_name) {
+        $error = 'First name is required.';
+    } elseif (!$last_name) {
+        $error = 'Last name is required.';
     } elseif (!isNbscEmail($email)) {
         $error = 'Only @nbsc.edu.ph email addresses are allowed.';
     } elseif (strlen($password) < 6) {
@@ -41,15 +48,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($chk2->fetch()) {
                 $error = 'This School ID is already registered.';
             } else {
-                $hash       = password_hash($password, PASSWORD_BCRYPT);
-                $first_name = 'User';
-                $last_name  = $school_id;
-                $department = 'General';
+                $hash = password_hash($password, PASSWORD_BCRYPT);
 
                 $pdo->prepare("INSERT INTO users (school_id, first_name, last_name, email, password, role, department, status) VALUES (?,?,?,?,?,?,?,'active')")
                     ->execute([$school_id, $first_name, $last_name, $email, $hash, $role, $department]);
 
-                logActivity($pdo, 'USER_REGISTERED', "New student registered with School ID: $school_id", null);
+                logActivity($pdo, 'USER_REGISTERED', "New student registered: $first_name $last_name (School ID: $school_id)", null);
 
                 $success = 'Account created successfully! You can now sign in.';
             }
@@ -152,6 +156,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       box-shadow: 0 0 0 3px rgba(30,64,175,0.10);
     }
 
+    /* ── Name row (side by side) ── */
+    .name-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
     /* ── Password toggle ── */
     .pw-wrap { position: relative; }
     .eye-btn {
@@ -222,6 +233,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     @media (max-width: 480px) {
       .register-card { padding: 28px 24px; }
+      .name-row { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -267,6 +279,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               required
               autofocus
             >
+          </div>
+
+          <!-- First Name & Last Name -->
+          <div class="mb-3 name-row">
+            <div>
+              <label class="form-label">First Name</label>
+              <input
+                type="text"
+                name="first_name"
+                class="form-control"
+                placeholder="Juan"
+                value="<?= sanitize($_POST['first_name'] ?? '') ?>"
+                required
+              >
+            </div>
+            <div>
+              <label class="form-label">Last Name</label>
+              <input
+                type="text"
+                name="last_name"
+                class="form-control"
+                placeholder="Dela Cruz"
+                value="<?= sanitize($_POST['last_name'] ?? '') ?>"
+                required
+              >
+            </div>
           </div>
 
           <!-- Email -->

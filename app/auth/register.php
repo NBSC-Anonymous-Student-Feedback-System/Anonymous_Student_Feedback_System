@@ -15,6 +15,8 @@ if (isset($_SESSION['role'])) {
 $error   = '';
 $success = '';
 
+$departments = ['ICS', 'IBM', 'ITE'];
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $school_id  = trim($_POST['school_id'] ?? '');
     $first_name = trim($_POST['first_name'] ?? '');
@@ -22,8 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email      = trim($_POST['email'] ?? '');
     $password   = trim($_POST['password'] ?? '');
     $confirm    = trim($_POST['confirm_password'] ?? '');
+    $department = trim($_POST['department'] ?? '');
     $role       = 'student';
-    $department = 'General';
 
     if (!$school_id) {
         $error = 'School ID is required.';
@@ -33,6 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Last name is required.';
     } elseif (!isNbscEmail($email)) {
         $error = 'Only @nbsc.edu.ph email addresses are allowed.';
+    } elseif (!in_array($department, $departments)) {
+        $error = 'Please select a valid department.';
     } elseif (strlen($password) < 6) {
         $error = 'Password must be at least 6 characters.';
     } elseif ($password !== $confirm) {
@@ -49,9 +53,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'This School ID is already registered.';
             } else {
                 $hash = password_hash($password, PASSWORD_BCRYPT);
+
                 $pdo->prepare("INSERT INTO users (school_id, first_name, last_name, email, password, role, department, status) VALUES (?,?,?,?,?,?,?,'active')")
                     ->execute([$school_id, $first_name, $last_name, $email, $hash, $role, $department]);
-                logActivity($pdo, 'USER_REGISTERED', "New student registered: $first_name $last_name (School ID: $school_id)", null);
+
+                logActivity($pdo, 'USER_REGISTERED', "New student registered: $first_name $last_name (School ID: $school_id, Dept: $department)", null);
+
+                // ── Notify all admins ──
+                $admins = $pdo->query("SELECT user_id FROM users WHERE role = 'admin'")->fetchAll();
+                foreach ($admins as $admin) {
+                    $pdo->prepare("INSERT INTO notifications (user_id, title, message) VALUES (?,?,?)")
+                        ->execute([
+                            $admin['user_id'],
+                            'New Student Registered',
+                            "$first_name $last_name ($department) has created a new student account with School ID: $school_id."
+                        ]);
+                }
+
                 $success = "$first_name $last_name";
             }
         }
@@ -132,11 +150,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .form-label {
       font-size: 13px; font-weight: 500;
       color: #374151; margin-bottom: 6px;
+      display: block;
     }
     .form-label span {
       color: #9ca3af; font-size: 11px; font-weight: 400;
     }
-    .form-control {
+    .form-control, .form-select {
       border-radius: 9px;
       font-size: 13.5px;
       padding: 10px 14px;
@@ -147,11 +166,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       color: #111827;
       background: #fff;
     }
-    .form-control:focus {
+    .form-control:focus, .form-select:focus {
       outline: none;
       border-color: #1e40af;
       box-shadow: 0 0 0 3px rgba(30,64,175,0.10);
     }
+    .form-select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 16px;
+      padding-right: 36px;
+      cursor: pointer;
+    }
+    .form-select option[value=""] { color: #9ca3af; }
 
     /* ── Name row ── */
     .name-row {
@@ -239,7 +268,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     .success-sub {
       font-size: 13px; color: #6b7280;
-      line-height: 1.6; margin: 0 0 28px;
+      line-height: 1.6; margin: 0 0 24px;
     }
     .btn-signin {
       display: block; width: 100%; padding: 12px;
@@ -291,7 +320,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
   <div class="register-wrap">
 
-    <!-- ── Brand Header ── */-->
+    <!-- ── Brand Header ── -->
     <div class="brand-header">
       <div class="brand-logo">
         <img src="<?= BASE_URL ?>/media/logoweb.svg" alt="NBSC Logo">
@@ -320,7 +349,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <div class="success-info-row">
               <span class="check">✅</span>
-              <span>Email verified as NBSC address</span>
+              <span>Department: <strong><?= sanitize($_POST['department'] ?? '') ?></strong></span>
             </div>
             <div class="success-info-row">
               <span class="check">✅</span>
@@ -389,6 +418,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 required
               >
             </div>
+          </div>
+
+          <!-- Department -->
+          <div class="mb-3">
+            <label class="form-label">Department</label>
+            <select name="department" class="form-select" required>
+              <option value="" disabled <?= empty($_POST['department']) ? 'selected' : '' ?>>Select your department</option>
+              <?php foreach ($departments as $dept): ?>
+                <option value="<?= $dept ?>" <?= (($_POST['department'] ?? '') === $dept) ? 'selected' : '' ?>>
+                  <?= $dept ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
           </div>
 
           <!-- Email -->

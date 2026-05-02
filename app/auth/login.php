@@ -182,7 +182,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     @media (max-width: 480px) {
       .login-card { padding: 28px 24px; }
     }
+
+    .register-link {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .register-link a {
+      color: #1e40af;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .register-link a:hover {
+      text-decoration: underline;
+    }
   </style>
+
 </head>
 <body>
   <div class="login-wrap">
@@ -239,6 +257,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <button type="submit" class="btn-login">Sign In</button>
       </form>
+
+      <div class="register-link">
+          Don't have an account?
+          <a href="<?= BASE_URL ?>/app/auth/register.php">Register here</a>
+      </div>
+       
 
       <div class="login-footer">
         🔒 Your identity is protected — feedback is fully anonymous

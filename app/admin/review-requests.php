@@ -28,6 +28,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['decide'])) {
                     "Your review request for Feedback #{$ri['feedback_id']} has been $decision." . ($adminNotes ? " Note: $adminNotes" : '')]);
         }
 
+        if ($decision === 'approved' && $ri) {
+    require_once __DIR__ . '/../../app/send_mail.php';
+
+    // Get student email from the feedback's submitter
+    $studentStmt = $pdo->prepare("
+        SELECT u.email, CONCAT(u.first_name,' ',u.last_name) AS full_name
+        FROM feedback f
+        JOIN users u ON f.user_id = u.user_id
+        WHERE f.feedback_id = ?
+    ");
+    $studentStmt->execute([$ri['feedback_id']]);
+    $student = $studentStmt->fetch();
+
+    if ($student) {
+        sendApprovalEmail($student['email'], $student['full_name'], $ri['feedback_id'], $adminNotes);
+    }
+}
+
         logActivity($pdo, 'REQUEST_' . strtoupper($decision), "Admin $decision review request #$rid", $_SESSION['user_id']);
         $msg = "Request #$rid has been $decision.";
     }

@@ -2,8 +2,8 @@
 return [
     'host'      => 'smtp.gmail.com',
     'port'      => 587,
-    'username'  => 'yourgmail@gmail.com',
-    'password'  => 'your_app_password',
-    'from'      => 'yourgmail@gmail.com',
-    'from_name' => 'NBSC Feedback System',
+    'username'  => 'francis.idul78@gmail.com',
+    'password'  => 'eisd fvsz sqxr aqzm',
+    'from'      => 'francis.idul78@gmail.com',
+    'from_name' => 'NBSC Anonymous Feedback System',
 ];

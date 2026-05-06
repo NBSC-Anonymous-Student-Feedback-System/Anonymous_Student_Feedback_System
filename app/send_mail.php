@@ -27,9 +27,7 @@ $mail->Body    = "
 
     <!-- Header -->
     <div style='background:linear-gradient(135deg,#1e40af,#0ea5e9);padding:36px 32px 28px;text-align:center;'>
-        <div style='width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;'>
-            <span style='font-size:26px;'>🔔</span>
-        </div>
+    
         <h1 style='color:#ffffff;margin:0;font-size:22px;font-weight:700;letter-spacing:-0.3px;'>Feedback Access Approved</h1>
         <p style='color:rgba(255,255,255,0.7);margin:6px 0 0;font-size:13px;'>Northern Bukidnon State College</p>
     </div>

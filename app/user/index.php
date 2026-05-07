@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
     $priority = $_POST['priority'] ?? '';
     $message  = trim($_POST['message'] ?? '');
     $allowed_cats = ['general','academic','facilities','services','faculty','administration','suggestion','complaint','other'];
-    $allowed_pri  = ['Low','Medium','High','Urgent'];
+    $allowed_pri  = ['Low','Medium','High','Urgent'];   
 
     if (in_array($category, $allowed_cats) && in_array($priority, $allowed_pri) && strlen($message) >= 10 && strlen($message) <= 1000) {
         $encMessage  = encryptMessage($message);
@@ -172,9 +172,36 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
     .page-section { display: none; }
     .page-section.active { display: block; }
 
+    /* ── Dashboard Page Header with CTA button ── */
     .page-header { margin-bottom: 24px; }
     .page-header h1 { font-size: 22px; font-weight: 700; margin: 0 0 4px; color: #111827; }
     .page-header p  { color: #6b7280; font-size: 13.5px; margin: 0; }
+    .dashboard-header-row {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; flex-wrap: wrap; gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    /* ── CTA Banner ── */
+    .cta-banner {
+      background: #eff6ff;
+      border: 1.5px solid #bfdbfe;
+      border-radius: 14px;
+      padding: 18px 22px;
+      display: flex; align-items: center;
+      justify-content: space-between;
+      gap: 16px; flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .cta-banner-left { display: flex; align-items: center; gap: 14px; }
+    .cta-banner-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: linear-gradient(135deg, #1e40af, #0ea5e9);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .cta-banner-title { font-size: 15px; font-weight: 700; color: #1e3a8a; margin-bottom: 2px; }
+    .cta-banner-sub   { font-size: 12.5px; color: #3b82f6; }
 
     /* Stats */
     .stats-row {
@@ -192,19 +219,17 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
     .stat-card.orange .stat-value { color: #d97706; }
     .stat-card.purple .stat-value { color: #7c3aed; font-size: 14px; margin-top: 4px; }
 
-  /* Charts */
-.charts-card { background: #fff; border-radius: 14px; border: 1px solid #e5e7eb; padding: 20px 24px; margin-bottom: 24px; }
-.charts-card-title { font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 16px; }
-.chart-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
-.chart-title { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
-.pie-wrap { display: flex; flex-direction: column; align-items: center; }
-.pie-wrap canvas { cursor: pointer; }
-
-.pie-legend { list-style: none; padding: 0; margin: 10px 0 0; width: 100%; display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: center; }
-.pie-legend li { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #374151; }
-.pie-legend li span.dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.pie-legend li span.lbl { }
-.pie-legend li span.val { color: #6b7280; font-size: 11px; }
+    /* Charts */
+    .charts-card { background: #fff; border-radius: 14px; border: 1px solid #e5e7eb; padding: 20px 24px; margin-bottom: 24px; }
+    .charts-card-title { font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 16px; }
+    .chart-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+    .chart-title { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+    .pie-wrap { display: flex; flex-direction: column; align-items: center; }
+    .pie-wrap canvas { cursor: pointer; }
+    .pie-legend { list-style: none; padding: 0; margin: 10px 0 0; width: 100%; display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: center; }
+    .pie-legend li { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #374151; }
+    .pie-legend li span.dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .pie-legend li span.val { color: #6b7280; font-size: 11px; }
 
     /* Submit card */
     .submit-card { background: #fff; border-radius: 14px; border: 1px solid #e5e7eb; overflow: hidden; margin-bottom: 24px; }
@@ -267,26 +292,28 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
       .stats-row { grid-template-columns: repeat(2, 1fr); }
       .chart-cols { grid-template-columns: 1fr; }
       .user-chip .user-name { display: none; }
+      .dashboard-header-row { flex-direction: column; }
+      .cta-banner { flex-direction: column; align-items: flex-start; }
     }
 
     .pagination-wrap {
-  display: flex; align-items: center; justify-content: center;
-  flex-direction: column; gap: 10px;
-  padding: 16px 20px 20px; margin-top: 12px;
-}
-.pagination-info { font-size: 12px; color: #6b7280; }
-.pagination-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
-.page-btn {
-  min-width: 34px; height: 34px; border-radius: 8px;
-  border: 1.5px solid #e5e7eb; background: #fff;
-  font-size: 13px; font-weight: 600; color: #374151;
-  cursor: pointer; font-family: 'Inter', sans-serif;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.15s; padding: 0 8px;
-}
-.page-btn:hover    { border-color: #1e40af; color: #1e40af; background: #eff6ff; }
-.page-btn.active   { background: linear-gradient(135deg, #1e40af, #0ea5e9); color: #fff; border-color: transparent; }
-.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 10px;
+      padding: 16px 20px 20px; margin-top: 12px;
+    }
+    .pagination-info { font-size: 12px; color: #6b7280; }
+    .pagination-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+    .page-btn {
+      min-width: 34px; height: 34px; border-radius: 8px;
+      border: 1.5px solid #e5e7eb; background: #fff;
+      font-size: 13px; font-weight: 600; color: #374151;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s; padding: 0 8px;
+    }
+    .page-btn:hover    { border-color: #1e40af; color: #1e40af; background: #eff6ff; }
+    .page-btn.active   { background: linear-gradient(135deg, #1e40af, #0ea5e9); color: #fff; border-color: transparent; }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -346,13 +373,29 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
     </div>
   <?php endif; ?>
 
-  <!-- SECTION: Dashboard -->
+  <!-- ═══════════════════════════════════════════════
+       SECTION: Dashboard
+  ════════════════════════════════════════════════ -->
   <div class="page-section active" id="section-dashboard">
-    <div class="page-header">
-      <h1>Student Dashboard</h1>
-      <p>Welcome, <?= sanitize($_SESSION['first_name']) ?>. Here's the current feedback overview.</p>
+
+
+    <!-- ── CTA Banner ── -->
+    <div class="cta-banner">
+      <div class="cta-banner-left">
+        <div class="cta-banner-icon">💬</div>
+        <div>
+          <div class="cta-banner-title">Have something to say?</div>
+          <div class="cta-banner-sub">Your anonymous feedback helps improve the school — every voice counts.</div>
+        </div>
+      </div>
+      <button onclick="showSection('submit')"
+        style="display:inline-flex;align-items:center;gap:8px;padding:11px 22px;background:linear-gradient(135deg,#1e40af,#0ea5e9);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;flex-shrink:0;transition:opacity 0.15s;"
+        onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+        🔒 Send Feedback Now
+      </button>
     </div>
 
+    <!-- ── Stats ── -->
     <div class="stats-row">
       <div class="stat-card blue">
         <div class="stat-label">Total Feedback</div>
@@ -372,28 +415,33 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
       </div>
     </div>
 
-   <div class="charts-card">
-  <div class="charts-card-title">Feedback Distribution</div>
-  <div class="chart-cols">
-    <div>
-      <div class="chart-title">By Priority</div>
-      <div class="pie-wrap">
-        <canvas id="priPie" width="160" height="160"></canvas>
-        <ul class="pie-legend" id="priLegend"></ul>
+    <!-- ── Charts ── -->
+    <div class="charts-card">
+      <div class="charts-card-title">Feedback Distribution</div>
+      <div class="chart-cols">
+        <div>
+          <div class="chart-title">By Priority</div>
+          <div class="pie-wrap">
+            <canvas id="priPie" width="160" height="160"></canvas>
+            <ul class="pie-legend" id="priLegend"></ul>
+          </div>
+        </div>
+        <div>
+          <div class="chart-title">By Category</div>
+          <div class="pie-wrap">
+            <canvas id="catPie" width="160" height="160"></canvas>
+            <ul class="pie-legend" id="catLegend"></ul>
+          </div>
+        </div>
       </div>
     </div>
-    <div>
-      <div class="chart-title">By Category</div>
-      <div class="pie-wrap">
-        <canvas id="catPie" width="160" height="160"></canvas>
-        <ul class="pie-legend" id="catLegend"></ul>
-      </div>
-    </div>
-  </div>
-</div>
-</div>
 
-  <!-- SECTION: Submit Feedback -->
+  </div><!-- end #section-dashboard -->
+
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION: Submit Feedback
+  ════════════════════════════════════════════════ -->
   <div class="page-section" id="section-submit">
     <div class="page-header">
       <h1>Submit Feedback</h1>
@@ -446,90 +494,92 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
         </div>
       </div>
     </div>
-  </div>
+  </div><!-- end #section-submit -->
 
-  
-  <!-- SECTION: My Submissions -->
-   <div id="submissionsList">
-  <div class="page-section" id="section-submissions">
-    <div class="page-header">
-      <h1>My Submissions</h1>
-      <p>Your personal feedback history. Only you can see this.</p>
-    </div>
 
-    <?php if (isset($_GET['updated'])): ?>
-      <div class="alert-success-box">✅ Feedback updated successfully.</div>
-    <?php elseif (isset($_GET['deleted'])): ?>
-      <div class="alert-success-box" style="background:#fef2f2;border-color:#dc2626;color:#991b1b;">🗑️ Feedback deleted successfully.</div>
-    <?php endif; ?>
-
-    <div class="section-header">
-      <h2>Recent Submissions</h2>
-      <span class="section-count"><?= count($mySubmissions) ?></span>
-    </div>
-
-    <?php if (empty($mySubmissions)): ?>
-      <div class="empty-state">
-        <div class="empty-icon">📭</div>
-        <p>You haven't submitted any feedback yet.<br>Go to <strong>Submit Feedback</strong> to get started!</p>
+  <!-- ═══════════════════════════════════════════════
+       SECTION: My Submissions
+  ════════════════════════════════════════════════ -->
+  <div id="submissionsList">
+    <div class="page-section" id="section-submissions">
+      <div class="page-header">
+        <h1>My Submissions</h1>
+        <p>Your personal feedback history. Only you can see this.</p>
       </div>
-    <?php else: foreach ($mySubmissions as $fb):
-      $plain = decryptMessage($fb['message_enc']); ?>
-      <div class="fb-card" id="fb-card-<?= $fb['feedback_id'] ?>">
-        <div class="fb-card-body">
-          <div class="fb-meta">
-            <span class="fb-cat"><?= categoryIcon($fb['category']) ?> <?= sanitize(categoryLabel($fb['category'])) ?></span>
-            <?= priorityBadge($fb['priority']) ?>
-          </div>
-          <div class="fb-message" id="view-<?= $fb['feedback_id'] ?>">
-            <?= sanitize($plain ?: '[Could not decrypt]') ?>
-          </div>
-          <form method="POST" id="edit-form-<?= $fb['feedback_id'] ?>" style="display:none;">
-            <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
-            <textarea name="updated_message" id="edit-msg-<?= $fb['feedback_id'] ?>"
-              class="msg-area" maxlength="1000" minlength="10" required
-              oninput="updateEditCount(<?= $fb['feedback_id'] ?>)"
-              style="margin-bottom:4px;"><?= sanitize($plain) ?></textarea>
-            <div class="char-count"><span id="edit-count-<?= $fb['feedback_id'] ?>"><?= strlen($plain) ?></span>/1000
-          </div>
-          </form>
-        <?php $isAddressed = !empty($fb['request_status']); ?>
-          <div class="fb-footer">
-            <span><?= timeAgo($fb['submitted_at']) ?></span>
-            <?php if ($isAddressed): ?>
-              <span style="font-size:12px;font-weight:600;color:#16a34a;display:flex;align-items:center;gap:5px;">
-                ✅ Feedback Addressed
-              </span>
-            <?php else: ?>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <button class="fb-action-btn btn-edit" id="edit-btn-<?= $fb['feedback_id'] ?>" onclick="startEdit(<?= $fb['feedback_id'] ?>)">Edit</button>
-                <button class="fb-action-btn btn-save" id="save-btn-<?= $fb['feedback_id'] ?>" style="display:none;" onclick="confirmUpdate(<?= $fb['feedback_id'] ?>)">Update</button>
-                <button class="fb-action-btn btn-cancel" id="cancel-btn-<?= $fb['feedback_id'] ?>" style="display:none;" onclick="cancelEdit(<?= $fb['feedback_id'] ?>)">Cancel</button>
-                <form method="POST" id="delete-form-<?= $fb['feedback_id'] ?>" style="display:inline;">
-                  <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
-                  <button type="button" class="fb-action-btn btn-delete" id="delete-btn-<?= $fb['feedback_id'] ?>" onclick="confirmDelete(<?= $fb['feedback_id'] ?>)">Delete</button>
-                </form>
-              </div>
-            <?php endif; ?>
-          </div>
+
+      <?php if (isset($_GET['updated'])): ?>
+        <div class="alert-success-box">✅ Feedback updated successfully.</div>
+      <?php elseif (isset($_GET['deleted'])): ?>
+        <div class="alert-success-box" style="background:#fef2f2;border-color:#dc2626;color:#991b1b;">🗑️ Feedback deleted successfully.</div>
+      <?php endif; ?>
+
+      <div class="section-header">
+        <h2>Recent Submissions</h2>
+        <span class="section-count"><?= count($mySubmissions) ?></span>
+      </div>
+
+      <?php if (empty($mySubmissions)): ?>
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <p>You haven't submitted any feedback yet.<br>Go to <strong>Submit Feedback</strong> to get started!</p>
         </div>
-        <?php if ($fb['review_notes']): ?>
-          <div class="review-note">
-            <strong>✅ Admin Response</strong>
-            <?= sanitize($fb['review_notes']) ?>
+      <?php else: foreach ($mySubmissions as $fb):
+        $plain = decryptMessage($fb['message_enc']); ?>
+        <div class="fb-card" id="fb-card-<?= $fb['feedback_id'] ?>">
+          <div class="fb-card-body">
+            <div class="fb-meta">
+              <span class="fb-cat"><?= categoryIcon($fb['category']) ?> <?= sanitize(categoryLabel($fb['category'])) ?></span>
+              <?= priorityBadge($fb['priority']) ?>
+            </div>
+            <div class="fb-message" id="view-<?= $fb['feedback_id'] ?>">
+              <?= sanitize($plain ?: '[Could not decrypt]') ?>
+            </div>
+            <form method="POST" id="edit-form-<?= $fb['feedback_id'] ?>" style="display:none;">
+              <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
+              <textarea name="updated_message" id="edit-msg-<?= $fb['feedback_id'] ?>"
+                class="msg-area" maxlength="1000" minlength="10" required
+                oninput="updateEditCount(<?= $fb['feedback_id'] ?>)"
+                style="margin-bottom:4px;"><?= sanitize($plain) ?></textarea>
+              <div class="char-count"><span id="edit-count-<?= $fb['feedback_id'] ?>"><?= strlen($plain) ?></span>/1000</div>
+            </form>
+            <?php $isAddressed = !empty($fb['request_status']); ?>
+            <div class="fb-footer">
+              <span><?= timeAgo($fb['submitted_at']) ?></span>
+              <?php if ($isAddressed): ?>
+                <span style="font-size:12px;font-weight:600;color:#16a34a;display:flex;align-items:center;gap:5px;">
+                  ✅ Feedback Addressed
+                </span>
+              <?php else: ?>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <button class="fb-action-btn btn-edit" id="edit-btn-<?= $fb['feedback_id'] ?>" onclick="startEdit(<?= $fb['feedback_id'] ?>)">Edit</button>
+                  <button class="fb-action-btn btn-save" id="save-btn-<?= $fb['feedback_id'] ?>" style="display:none;" onclick="confirmUpdate(<?= $fb['feedback_id'] ?>)">Update</button>
+                  <button class="fb-action-btn btn-cancel" id="cancel-btn-<?= $fb['feedback_id'] ?>" style="display:none;" onclick="cancelEdit(<?= $fb['feedback_id'] ?>)">Cancel</button>
+                  <form method="POST" id="delete-form-<?= $fb['feedback_id'] ?>" style="display:inline;">
+                    <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
+                    <button type="button" class="fb-action-btn btn-delete" id="delete-btn-<?= $fb['feedback_id'] ?>" onclick="confirmDelete(<?= $fb['feedback_id'] ?>)">Delete</button>
+                  </form>
+                </div>
+              <?php endif; ?>
+            </div>
           </div>
-        <?php endif; ?>
-      </div>
-    <?php endforeach; endif; ?>
-    
-     <!-- Pagination -->
-    <div class="pagination-wrap" id="paginationWrap" style="display:none;">
-      <span class="pagination-info" id="paginationInfo"></span>
-      <div class="pagination-btns" id="pageButtons"></div>
-    </div>
-  </div>
+          <?php if ($fb['review_notes']): ?>
+            <div class="review-note">
+              <strong>✅ Admin Response</strong>
+              <?= sanitize($fb['review_notes']) ?>
+            </div>
+          <?php endif; ?>
+        </div>
+      <?php endforeach; endif; ?>
 
-</div>
+      <!-- Pagination -->
+      <div class="pagination-wrap" id="paginationWrap" style="display:none;">
+        <span class="pagination-info" id="paginationInfo"></span>
+        <div class="pagination-btns" id="pageButtons"></div>
+      </div>
+    </div>
+  </div><!-- end #submissionsList -->
+
+</div><!-- end .page-wrap -->
 
 <script>
   // ── Hamburger ──
@@ -549,6 +599,7 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
       const nav = document.getElementById('nav-' + s);
       if (nav) nav.classList.toggle('active', s === name);
     });
+    if (name === 'submissions') initSubmissionPagination();
   }
 
   function sendAnother() {
@@ -645,13 +696,10 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
   function renderSubPage() {
     const cards = Array.from(document.querySelectorAll('.fb-card'));
     if (cards.length === 0) return;
-
     cards.forEach(c => c.style.display = 'none');
-
-    const start     = (subCurrentPage - 1) * CARDS_PER_PAGE;
-    const end       = start + CARDS_PER_PAGE;
+    const start = (subCurrentPage - 1) * CARDS_PER_PAGE;
+    const end   = start + CARDS_PER_PAGE;
     cards.slice(start, end).forEach(c => c.style.display = '');
-
     renderSubPagination(cards.length);
   }
 
@@ -659,21 +707,15 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
     const totalPages = Math.ceil(total / CARDS_PER_PAGE);
     const wrap       = document.getElementById('paginationWrap');
     const btns       = document.getElementById('pageButtons');
-
     if (totalPages <= 1) { wrap.style.display = 'none'; return; }
-
     wrap.style.display = 'flex';
     btns.innerHTML     = '';
-
-    // Prev
     const prev       = document.createElement('button');
     prev.className   = 'page-btn';
     prev.textContent = '←';
     prev.disabled    = subCurrentPage === 1;
     prev.onclick     = () => { subCurrentPage--; renderSubPage(); };
     btns.appendChild(prev);
-
-    // Page numbers with ellipsis
     for (let i = 1; i <= totalPages; i++) {
       if (i === 1 || i === totalPages || (i >= subCurrentPage - 1 && i <= subCurrentPage + 1)) {
         const btn       = document.createElement('button');
@@ -684,134 +726,110 @@ $topCategory   = !empty($catStats) ? $catStats[0]['category'] : 'general';
         })(i);
         btns.appendChild(btn);
       } else if (i === subCurrentPage - 2 || i === subCurrentPage + 2) {
-        const dots           = document.createElement('span');
-        dots.textContent     = '…';
-        dots.style.cssText   = 'color:#9ca3af;font-size:13px;padding:0 4px;';
+        const dots         = document.createElement('span');
+        dots.textContent   = '…';
+        dots.style.cssText = 'color:#9ca3af;font-size:13px;padding:0 4px;';
         btns.appendChild(dots);
       }
     }
-
-    // Next
     const next       = document.createElement('button');
     next.className   = 'page-btn';
     next.textContent = '→';
     next.disabled    = subCurrentPage === totalPages;
     next.onclick     = () => { subCurrentPage++; renderSubPage(); };
     btns.appendChild(next);
-
     document.getElementById('paginationInfo').textContent =
       'Page ' + subCurrentPage + ' of ' + totalPages;
   }
 
-  // Hook into existing showSection
-  const _origShowSection = showSection;
-  showSection = function(name) {
-    _origShowSection(name);
-    if (name === 'submissions') initSubmissionPagination();
-  };
-
-  // Init if auto-redirected to submissions
   <?php if (isset($_GET['updated']) || isset($_GET['deleted'])): ?>
     initSubmissionPagination();
   <?php endif; ?>
 
+  // ── Charts ──
+  const priData = [
+    { label: 'Urgent', count: <?= (int)$urgentCount ?>, color: '#dc2626' },
+    { label: 'High',   count: <?= (int)$highCount ?>,   color: '#ea580c' },
+    { label: 'Medium', count: <?= (int)$mediumCount ?>, color: '#d97706' },
+    { label: 'Low',    count: <?= (int)$lowCount ?>,    color: '#16a34a' }
+  ];
 
-// Priority data from PHP
-const priData = [
-  { label: 'Urgent', count: <?= (int)$urgentCount ?>, color: '#dc2626' },
-  { label: 'High',   count: <?= (int)$highCount ?>,   color: '#ea580c' },
-  { label: 'Medium', count: <?= (int)$mediumCount ?>, color: '#d97706' },
-  { label: 'Low',    count: <?= (int)$lowCount ?>,    color: '#16a34a' }
-];
+  const catColors = ['#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#06b6d4','#ef4444','#6366f1'];
+  const catData = [
+    <?php foreach ($catStats as $i => $cs): ?>
+    { label: '<?= addslashes(categoryLabel($cs['category'])) ?>', count: <?= (int)$cs['total'] ?>, color: catColors[<?= $i ?> % catColors.length] },
+    <?php endforeach; ?>
+  ];
 
-// Category data from PHP — random distinct colors
-const catColors = ['#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#06b6d4','#ef4444','#6366f1'];
-const catData = [
-  <?php foreach ($catStats as $i => $cs): ?>
-  { label: '<?= addslashes(categoryLabel($cs['category'])) ?>', count: <?= (int)$cs['total'] ?>, color: catColors[<?= $i ?> % catColors.length] },
-  <?php endforeach; ?>
-];
-function drawPie(canvasId, legendId, data) {
-  const canvas = document.getElementById(canvasId);
-  if (!canvas) return;
-   const dpr = window.devicePixelRatio || 1;
-  const size = 200;
-  canvas.width  = size * dpr;
-  canvas.height = size * dpr;
-  canvas.style.width  = size + 'px';
-  canvas.style.height = size + 'px';
-
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  const cx = size / 2, cy = size / 2, r = 68;  // use size, not canvas.width
-  const total = data.reduce((s, d) => s + d.count, 0);
-
-  const slices = [];
-  let angle = -Math.PI / 2;
-  data.forEach(d => {
-    const sweep = total > 0 ? (d.count / total) * 2 * Math.PI : 0;
-    slices.push({ ...d, start: angle, end: angle + sweep });
-    angle += sweep;
-  });
-
-  // Legend — horizontal
-  const legend = document.getElementById(legendId);
-  legend.innerHTML = '';
-  data.forEach(d => {
-    const pct = total > 0 ? Math.round((d.count / total) * 100) : 0;
-    legend.innerHTML += `<li>
-      <span class="dot" style="background:${d.color}"></span>
-      <span class="lbl">${d.label}</span>
-      <span class="val">${d.count}</span>
-    </li>`;
-  });
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  if (total === 0) {
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, 2 * Math.PI);
-    ctx.fillStyle = '#f3f4f6';
-    ctx.fill();
-    ctx.fillStyle = '#9ca3af';
-    ctx.font = '12px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('No data', cx, cy + 4);
-    return;
+  function drawPie(canvasId, legendId, data) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const dpr  = window.devicePixelRatio || 1;
+    const size = 200;
+    canvas.width  = size * dpr;
+    canvas.height = size * dpr;
+    canvas.style.width  = size + 'px';
+    canvas.style.height = size + 'px';
+    const ctx   = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    const cx    = size / 2, cy = size / 2, r = 68;
+    const total = data.reduce((s, d) => s + d.count, 0);
+    const slices = [];
+    let angle = -Math.PI / 2;
+    data.forEach(d => {
+      const sweep = total > 0 ? (d.count / total) * 2 * Math.PI : 0;
+      slices.push({ ...d, start: angle, end: angle + sweep });
+      angle += sweep;
+    });
+    const legend = document.getElementById(legendId);
+    legend.innerHTML = '';
+    data.forEach(d => {
+      legend.innerHTML += `<li>
+        <span class="dot" style="background:${d.color}"></span>
+        <span class="lbl">${d.label}</span>
+        <span class="val">${d.count}</span>
+      </li>`;
+    });
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (total === 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+      ctx.fillStyle = '#f3f4f6';
+      ctx.fill();
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No data', cx, cy + 4);
+      return;
+    }
+    slices.forEach(s => {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, s.start, s.end);
+      ctx.closePath();
+      ctx.fillStyle = s.color;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+    slices.forEach(s => {
+      const pct = Math.round((s.count / total) * 100);
+      if (pct === 0) return;
+      const midAngle = (s.start + s.end) / 2;
+      const labelR   = r * 0.62;
+      const lx = cx + Math.cos(midAngle) * labelR;
+      const ly = cy + Math.sin(midAngle) * labelR;
+      ctx.fillStyle = '#fff';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(pct + '%', lx, ly);
+    });
   }
 
-  // Draw slices
-  slices.forEach(s => {
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, r, s.start, s.end);
-    ctx.closePath();
-    ctx.fillStyle = s.color;
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  });
-
-  // Draw percentage labels inside slices
-  slices.forEach(s => {
-    const pct = Math.round((s.count / total) * 100);
-    if (pct === 0) return; // skip empty slices
-    const midAngle = (s.start + s.end) / 2;
-    const labelR = r * 0.62; // distance from center
-    const lx = cx + Math.cos(midAngle) * labelR;
-    const ly = cy + Math.sin(midAngle) * labelR;
-    ctx.fillStyle = '#fff';
-    ctx.font = '11px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(pct + '%', lx, ly);
-  });
-}
-
-drawPie('priPie', 'priLegend', priData);
-drawPie('catPie', 'catLegend', catData);
+  drawPie('priPie', 'priLegend', priData);
+  drawPie('catPie', 'catLegend', catData);
 </script>
 </body>
 </html>

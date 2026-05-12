@@ -33,6 +33,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
     } else { $err = 'Cannot delete your own account.'; }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
+    $uid       = (int)$_POST['user_id'];
+    $school_id = $_POST['school_id'];
+    $first     = $_POST['first_name'];
+    $last      = $_POST['last_name'];
+    $email     = $_POST['email'];
+    $role      = $_POST['role'];
+    $dept      = $_POST['department'];
+    $pass      = $_POST['password'];
+
+    if ($uid && $school_id && $first && $last && $email && $role && $dept) {
+        $chk = $pdo->prepare("SELECT user_id FROM users WHERE email=? AND user_id!=?");
+        $chk->execute([$email, $uid]);
+        if ($chk->fetch()) {
+            $err = 'Email already in use by another account.';
+        } else {
+            if (!empty($pass)) {
+                $hash = password_hash($pass, PASSWORD_BCRYPT);
+                $pdo->prepare("UPDATE users SET school_id=?,first_name=?,last_name=?,email=?,password=?,role=?,department=? WHERE user_id=?")
+                    ->execute([$school_id, $first, $last, $email, $hash, $role, $dept, $uid]);
+            } else {
+                $pdo->prepare("UPDATE users SET school_id=?,first_name=?,last_name=?,email=?,role=?,department=? WHERE user_id=?")
+                    ->execute([$school_id, $first, $last, $email, $role, $dept, $uid]);
+            }
+            logActivity($pdo, 'USER_UPDATED', "Updated account for $first $last", $_SESSION['user_id']);
+            $msg = 'User updated successfully.';
+        }
+    } else {
+        $err = 'Please fill all required fields.';
+    }
+}
+
 $users = $pdo->query("SELECT * FROM users ORDER BY role, last_name")->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -183,6 +215,15 @@ $users = $pdo->query("SELECT * FROM users ORDER BY role, last_name")->fetchAll()
     .dept-cell  { font-size: 13px; color: #374151; }
     .date-cell  { font-size: 12px; color: #9ca3af; white-space: nowrap; }
 
+    .btn-edit {
+      background: #eff6ff; color: #1e40af;
+      border: 1.5px solid #93c5fd; border-radius: 7px;
+      padding: 5px 12px; font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: all 0.15s;
+    }
+    .btn-edit:hover { background: #dbeafe; }
+
     .btn-delete {
       background: #fef2f2; color: #dc2626;
       border: 1.5px solid #fca5a5; border-radius: 7px;
@@ -255,26 +296,25 @@ $users = $pdo->query("SELECT * FROM users ORDER BY role, last_name")->fetchAll()
     }
 
     /* Pagination */
-.pagination-wrap {
-  display: flex; align-items: center; justify-content: center;
-  flex-direction: column; gap: 10px;
-  padding: 16px 20px 20px; border-top: 1px solid #f3f4f6;
-}
-.pagination-info { font-size: 12px; color: #6b7280; }
-.pagination-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+    .pagination-wrap {
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 10px;
+      padding: 16px 20px 20px; border-top: 1px solid #f3f4f6;
+    }
+    .pagination-info { font-size: 12px; color: #6b7280; }
+    .pagination-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
 
-.page-btn {
-  min-width: 34px; height: 34px; border-radius: 8px;
-  border: 1.5px solid #e5e7eb; background: #fff;
-  font-size: 13px; font-weight: 600; color: #374151;
-  cursor: pointer; font-family: 'Inter', sans-serif;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.15s; padding: 0 8px;
-}
-.page-btn:hover   { border-color: #1e40af; color: #1e40af; background: #eff6ff; }
-.page-btn.active  { background: linear-gradient(135deg, #1e40af, #0ea5e9); color: #fff; border-color: transparent; }
-.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
+    .page-btn {
+      min-width: 34px; height: 34px; border-radius: 8px;
+      border: 1.5px solid #e5e7eb; background: #fff;
+      font-size: 13px; font-weight: 600; color: #374151;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s; padding: 0 8px;
+    }
+    .page-btn:hover   { border-color: #1e40af; color: #1e40af; background: #eff6ff; }
+    .page-btn.active  { background: linear-gradient(135deg, #1e40af, #0ea5e9); color: #fff; border-color: transparent; }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -390,8 +430,18 @@ $users = $pdo->query("SELECT * FROM users ORDER BY role, last_name")->fetchAll()
             <td><?= roleBadge($u['role']) ?></td>
             <td class="dept-cell"><?= sanitize($u['department']) ?></td>
             <td class="date-cell"><?= date('M d, Y', strtotime($u['created_at'])) ?></td>
-           <td>
+            <td style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
               <?php if ($u['user_id'] !== $_SESSION['user_id'] && $u['role'] !== 'staff' && $u['role'] !== 'admin'): ?>
+                <button type="button" class="btn-edit"
+                  onclick="openEditModal(
+                    <?= $u['user_id'] ?>,
+                    '<?= addslashes(sanitize($u['school_id'])) ?>',
+                    '<?= addslashes(sanitize($u['first_name'])) ?>',
+                    '<?= addslashes(sanitize($u['last_name'])) ?>',
+                    '<?= addslashes(sanitize($u['email'])) ?>',
+                    '<?= addslashes($u['role']) ?>',
+                    '<?= addslashes(sanitize($u['department'])) ?>'
+                  )">Edit</button>
                 <form method="POST" style="display:inline;"
                   onsubmit="return confirm('Are you sure you want to delete this user?')">
                   <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
@@ -403,17 +453,15 @@ $users = $pdo->query("SELECT * FROM users ORDER BY role, last_name")->fetchAll()
             </td>
           </tr>
           <?php endforeach; ?>
-
-
         </tbody>
       </table>
     </div>
-             <!-- Pagination -->
+
+    <!-- Pagination -->
     <div class="pagination-wrap" id="paginationWrap" style="display:none;">
       <span class="pagination-info" id="paginationInfo"></span>
       <div class="pagination-btns" id="pageButtons"></div>
     </div>
-
   </div>
 </div>
 
@@ -469,7 +517,63 @@ $users = $pdo->query("SELECT * FROM users ORDER BY role, last_name")->fetchAll()
   </div>
 </div>
 
+<!-- ── Edit User Modal ── -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Edit User</span>
+      <button class="modal-close" onclick="closeEditModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <form method="POST">
+        <input type="hidden" name="user_id" id="edit_user_id">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label-custom">School ID *</label>
+            <input type="text" name="school_id" id="edit_school_id" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label-custom">Role *</label>
+            <select name="role" id="edit_role" class="form-input" required>
+              <option value="student">Student</option>
+              <option value="staff">Manager</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label-custom">First Name *</label>
+            <input type="text" name="first_name" id="edit_first_name" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label-custom">Last Name *</label>
+            <input type="text" name="last_name" id="edit_last_name" class="form-input" required>
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label-custom">Email *</label>
+            <input type="email" name="email" id="edit_email" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label-custom">New Password
+              <span style="font-weight:400;color:#9ca3af;">(leave blank to keep)</span>
+            </label>
+            <input type="password" name="password" id="edit_password" class="form-input" placeholder="••••••••">
+          </div>
+          <div class="form-group">
+            <label class="form-label-custom">Department *</label>
+            <input type="text" name="department" id="edit_department" class="form-input" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-modal-cancel" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" name="update_user" class="btn-modal-create">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
+  // ── Hamburger ──
   function toggleMenu() {
     document.getElementById('hamburgerMenu').classList.toggle('open');
   }
@@ -481,6 +585,7 @@ $users = $pdo->query("SELECT * FROM users ORDER BY role, last_name")->fetchAll()
     }
   });
 
+  // ── Create Modal ──
   function openCreateModal() {
     document.getElementById('createModal').classList.add('open');
   }
@@ -491,14 +596,38 @@ $users = $pdo->query("SELECT * FROM users ORDER BY role, last_name")->fetchAll()
     if (e.target === this) closeCreateModal();
   });
 
-  <?php if ($msg || $err): ?>
-    // Keep modal open if there was a create error
-    <?php if ($err && str_contains($err, 'Email')): ?>
-      openCreateModal();
-    <?php endif; ?>
+  <?php if ($err && str_contains($err, 'Email already exists')): ?>
+    openCreateModal();
   <?php endif; ?>
 
-  // ── Users Pagination ──
+  // ── Edit Modal ──
+  function openEditModal(uid, schoolId, first, last, email, role, dept) {
+    document.getElementById('edit_user_id').value    = uid;
+    document.getElementById('edit_school_id').value  = schoolId;
+    document.getElementById('edit_first_name').value = first;
+    document.getElementById('edit_last_name').value  = last;
+    document.getElementById('edit_email').value      = email;
+    document.getElementById('edit_role').value       = role;
+    document.getElementById('edit_department').value = dept;
+    document.getElementById('edit_password').value   = '';
+    document.getElementById('editModal').classList.add('open');
+  }
+  function closeEditModal() {
+    document.getElementById('editModal').classList.remove('open');
+  }
+  document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+  });
+
+  <?php if ($err && str_contains($err, 'Email already in use')): ?>
+    // Re-open edit modal on email conflict error
+    document.addEventListener('DOMContentLoaded', function() {
+      // Modal can't auto-reopen on update error without storing state,
+      // but the error message will still display prominently.
+    });
+  <?php endif; ?>
+
+  // ── Pagination ──
   const ROWS_PER_PAGE = 10;
   let currentPage     = 1;
 
@@ -565,9 +694,7 @@ $users = $pdo->query("SELECT * FROM users ORDER BY role, last_name")->fetchAll()
       'Page ' + currentPage + ' of ' + totalPages;
   }
 
-  // Init on load
   initPagination();
-
 </script>
 </body>
 </html>
